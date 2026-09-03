@@ -1,0 +1,15 @@
+{
+  "name": "true-colours",
+  "version": "1.0.0",
+  "private": true,
+  "description": "True Colours - colour in the world's flags from memory",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "build:flags": "python3 tools/build_flags.py",
+    "build:preview": "node tools/build_preview.js"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.34.0"
+  }
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>True Colours — the flag colouring game</title>
+  <meta name="description" content="How well do you really know the world's flags? Colour in a flag from memory and score points for how close your colours are to the real thing.">
+  <meta property="og:title" content="True Colours — the flag colouring game">
+  <meta property="og:description" content="Colour in a country's flag from memory. Score points for how close you get. New daily challenge every day.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0b1526">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1526'/%3E%3Crect x='12' y='16' width='40' height='11' fill='%23ff6b57'/%3E%3Crect x='12' y='27' width='40' height='11' fill='%23f4f4f1'/%3E%3Crect x='12' y='38' width='40' height='11' fill='%232ee6c5'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Google Analytics (GA4). Swap the ID below if you create a new data stream for this site. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SR1N5CH6R0"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SR1N5CH6R0');
+  </script>
+</head>
+<body>
+  <div class="bg-contours" aria-hidden="true"></div>
+
+  <!-- ================= HOME ================= -->
+  <section id="screen-home" class="screen active">
+    <div class="home-wrap">
+      <div class="logo">
+        <div class="logo-flag" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h1>TRUE<br>COLOURS</h1>
+      </div>
+      <p class="tagline">How well do you <em>really</em> know the world's flags?<br>Colour one in from memory — score points for every shade you get right.</p>
+
+      <div class="mode-cards">
+        <button class="mode-card daily" id="btn-daily">
+          <span class="mode-kicker" id="daily-kicker">Daily Challenge</span>
+          <span class="mode-title" id="daily-title">Today's flag</span>
+          <span class="mode-desc" id="daily-desc">One flag, one attempt, same for everyone. See how you rank and share your score.</span>
+        </button>
+        <button class="mode-card quick" id="btn-quick">
+          <span class="mode-kicker">Quick Play</span>
+          <span class="mode-title">5 random flags</span>
+          <span class="mode-desc">Five rounds, five countries, no repeats. Score up to 5,000 points.</span>
+        </button>
+      </div>
+      <button class="link-btn" id="btn-how">How does scoring work?</button>
+      <p class="credits">Flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a> (MIT). Colours judged with CIEDE2000.</p>
+    </div>
+  </section>
+
+  <!-- ================= PLAY ================= -->
+  <section id="screen-play" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-home" aria-label="Back to menu">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+      </button>
+      <div class="round-label" id="round-label">Round 1 of 5</div>
+      <div class="score-chip" id="score-chip"><span class="score-chip-label">Total</span><span id="score-total">0</span></div>
+    </header>
+
+    <div class="play-grid">
+      <div class="flag-col">
+        <h2 class="country-name" id="country-name">COUNTRY</h2>
+        <div class="flag-frame">
+          <canvas id="flag-canvas" width="800" height="600" aria-label="Flag to colour in"></canvas>
+          <div class="flag-loading" id="flag-loading"><div class="spinner"></div></div>
+        </div>
+        <p class="prefill-note" id="prefill-note" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>
+          Some fine details of this flag have been filled in for you.
+        </p>
+        <div class="progress-row">
+          <div class="progress-text" id="progress-text">0 of 3 regions filled</div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+      </div>
+
+      <aside class="tools-col">
+        <div class="tools-head">
+          <div class="tool-label">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16.56 8.94 7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 0 0 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10 10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5a2 2 0 1 0 4 0c0-1.33-2-3.5-2-3.5z"/></svg>
+            Fill colour
+          </div>
+          <span class="hint">Pick a colour, then click a region</span>
+        </div>
+        <div id="picker"></div>
+        <div class="tool-actions">
+          <button class="btn ghost" id="btn-clear">Clear all</button>
+          <button class="btn primary" id="btn-submit" disabled>Submit</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= ROUND RESULT ================= -->
+  <section id="screen-result" class="screen">
+    <div class="result-wrap">
+      <div class="result-head">
+        <span class="kicker" id="result-kicker">Round 1 of 5</span>
+        <h2 class="country-name small" id="result-country">COUNTRY</h2>
+      </div>
+      <div class="result-score">
+        <div class="big-score"><span id="result-points">0</span><span class="of">/1000</span></div>
+        <div class="verdict" id="result-verdict">Spot on</div>
+      </div>
+      <div class="compare">
+        <figure><canvas id="result-yours"></canvas><figcaption>Your flag</figcaption></figure>
+        <figure><canvas id="result-actual"></canvas><figcaption>The real flag</figcaption></figure>
+      </div>
+      <div class="breakdown" id="breakdown"></div>
+
+      <div id="daily-stats" class="daily-stats" hidden></div>
+
+      <div class="result-actions" id="result-actions"></div>
+    </div>
+  </section>
+
+  <!-- ================= FINAL (quick play) ================= -->
+  <section id="screen-final" class="screen">
+    <div class="result-wrap">
+      <span class="kicker">Quick Play complete</span>
+      <h2 class="final-title">Final score</h2>
+      <div class="result-score">
+        <div class="big-score"><span id="final-points">0</span><span class="of">/5000</span></div>
+        <div class="verdict" id="final-verdict"></div>
+      </div>
+      <div class="rounds-list" id="rounds-list"></div>
+      <div class="result-actions">
+        <button class="btn primary" id="btn-again">Play again</button>
+        <button class="btn ghost" id="btn-final-home">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HOW TO PLAY ================= -->
+  <div class="modal" id="modal-how" hidden>
+    <div class="modal-card">
+      <button class="icon-btn modal-close" id="btn-how-close" aria-label="Close">✕</button>
+      <h3>How it works</h3>
+      <p>You get a flag drawn as an outline, like a colouring book, and the name of the country. Pick a colour with the picker, then click each region to fill it. When every region is filled, hit <b>Submit</b>.</p>
+      <p>Each colour in the real flag is worth an equal share of <b>1,000 points</b>. Your colour is compared with the real one using CIEDE2000, a measure of how different two colours <em>look</em> to a human eye — not just how far apart the numbers are. A difference you couldn't spot still scores 1,000; the further off you are, the faster the points fall away.</p>
+      <p>Very small details (fine emblems, tiny stars, lettering) are pre-filled for you so you can focus on the big blocks of colour.</p>
+      <p><b>Daily Challenge</b>: everyone in the world gets the same flag each day (resets at midnight UTC). One attempt only, so make it count — then share your score.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="js/color.js"></script>
+  <script src="js/picker.js"></script>
+  <script src="js/flagboard.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
