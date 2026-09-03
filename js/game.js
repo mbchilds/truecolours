@@ -4,7 +4,7 @@
 
   // ----------------------------------------------------------------- config
   const CONFIG = {
-    siteName: 'True Colours',
+    siteName: 'FlagFill',
     rounds: 5,                                  // quick play rounds
     dailyEpoch: Date.UTC(2026, 8, 1),           // Daily #1 = 1 Sep 2026 (UTC)
     dailySeed: 20260901,                        // fixed shuffle so the daily order never changes

@@ -1,4 +1,4 @@
-# True Colours
+# FlagFill
 
 A web game about how well you *really* know the world's flags. You get a flag as a
 colouring-book outline plus the country name, a full colour picker and a fill tool.

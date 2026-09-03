@@ -1,8 +1,8 @@
 {
-  "name": "true-colours",
+  "name": "flagfill",
   "version": "1.0.0",
   "private": true,
-  "description": "True Colours - colour in the world's flags from memory",
+  "description": "FlagFill - colour in the world's flags from memory",
   "type": "module",
   "scripts": {
     "dev": "npx serve .",
