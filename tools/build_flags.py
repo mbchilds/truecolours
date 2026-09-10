@@ -158,7 +158,7 @@ def find_regions(idx, palette, threshold=PREFILL_THRESHOLD, strict=False):
         _, (iy, ix) = ndimage.distance_transform_edt(sliver, return_indices=True)
         labels[sliver] = labels[iy[sliver], ix[sliver]]
         prefilled_px += int((labels[sliver] == 0).sum())
-    return labels, regions, prefilled_px / total
+    return labels, regions, prefilled_px / total, sliver
 
 
 def apply_groups(labels, idx, palette, groups, threshold):
@@ -215,6 +215,21 @@ def apply_groups(labels, idx, palette, groups, threshold):
             if target == 0:
                 print("   (group target point is not on a fillable region:", g, ")"); continue
             for r in chosen: labels[lab == r] = target
+    return labels
+
+
+def reabsorb_slivers(labels, sliver):
+    """After grouping, a sliver can be left holding a label that no real pixel has any
+    more (its neighbour was moved into a group). Such orphans would become phantom
+    regions - unclickable, but still counted. Give them the label of the nearest
+    non-sliver pixel again."""
+    if not sliver.any():
+        return labels
+    real = np.unique(labels[~sliver])
+    orphan = sliver & ~np.isin(labels, real)
+    if orphan.any():
+        _, (iy, ix) = ndimage.distance_transform_edt(sliver, return_indices=True)
+        labels[orphan] = labels[iy[orphan], ix[orphan]]
     return labels
 
 
@@ -275,17 +290,24 @@ def main():
     countries = {c["code"]: c for c in json.load(open(os.path.join(SRC, "country.json")))}
     manifest = []
     report = []
+    only = os.environ.get("FLAG_ONLY")            # e.g. FLAG_ONLY=zm,dz for a quick partial rebuild
     for code in CODES:
+        if only and code not in only.split(","): continue
         svg_path = os.path.join(SRC, "flags", "4x3", f"{code}.svg")
         if not os.path.exists(svg_path):
             print("MISSING", code); continue
         name = NAME_OVERRIDES.get(code) or countries.get(code, {}).get("name") or code.upper()
         rgba = render(svg_path)
         idx, palette = quantise(rgba)
-        labels, regions, prefilled = find_regions(idx, palette, THRESHOLDS.get(code, PREFILL_THRESHOLD), code in STRICT)
+        labels, regions, prefilled, sliver = find_regions(idx, palette, THRESHOLDS.get(code, PREFILL_THRESHOLD), code in STRICT)
         if code in GROUPS:
             labels = apply_groups(labels, idx, palette, GROUPS[code], THRESHOLDS.get(code, PREFILL_THRESHOLD))
+            labels = reabsorb_slivers(labels, sliver)
             labels, regions = rebuild_regions(labels, idx, palette)
+        # every region must have somewhere to click (the game draws a ~3px outline)
+        for r in regions:
+            if not ndimage.binary_erosion(labels == r["id"], iterations=2).any():
+                print(f"   WARNING {code}: region {r['id']} {r['hex']} ({r['area']*100:.3f}%) has no clickable pixels")
             prefilled = float(((labels == 0) & (rgba[..., 3] >= 128)).sum() / (W * H))
         if not regions:
             print("NO FILLABLE REGIONS", code, name); continue
@@ -299,7 +321,12 @@ def main():
                          "prefilled": round(prefilled, 4)})
         report.append((code, name, len(regions), len(colours), prefilled))
         print(f"{code}  {name:32s} regions={len(regions):3d} colours={len(colours)} prefilled={prefilled*100:5.1f}%")
-    with open(os.path.join(OUT, "manifest.json"), "w") as f:
+    mpath = os.path.join(OUT, "manifest.json")
+    if only and os.path.exists(mpath):               # partial build: splice into the existing manifest
+        old = json.load(open(mpath))["flags"]
+        new = {m["code"]: m for m in manifest}
+        manifest = [new.pop(m["code"], m) for m in old] + list(new.values())
+    with open(mpath, "w") as f:
         json.dump({"width": W, "height": H, "threshold": PREFILL_THRESHOLD, "flags": manifest}, f, separators=(",", ":"))
     print(f"\n{len(manifest)} flags written to {os.path.abspath(OUT)}")
 

@@ -12,9 +12,19 @@ import { Redis } from '@upstash/redis';
 
 const BUCKET = 50; // score bucket width for the percentile histogram
 
+// Finds the Upstash REST credentials whatever prefix the Vercel integration gave
+// them (KV_REST_API_URL, STORAGE_REST_API_URL, UPSTASH_REDIS_REST_URL, ...).
 function getRedis() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const env = process.env;
+  let url = env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL;
+  let token = env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    const urlKey = Object.keys(env).find(k => /REST_API_URL$/.test(k) || /REDIS_REST_URL$/.test(k));
+    if (urlKey) {
+      const tokenKey = urlKey.replace(/URL$/, 'TOKEN');
+      url = env[urlKey]; token = env[tokenKey];
+    }
+  }
   if (!url || !token) return null;
   return new Redis({ url, token });
 }

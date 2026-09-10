@@ -153,4 +153,8 @@ GROUPS = {
     "cy": [dict(hex="#435125")],
     # Honduras: stars fill together
     "hn": [dict(hex="#18c3df", minor=True)],
+    # Ethiopia: all yellow (star, rays and both halves of the stripe) is one piece
+    "et": [dict(hex="#ffc621")],
+    # Brunei: emblem yellow joins the lower yellow band; emblem red is one piece
+    "bn": [dict(hex="#f7e017", minor=True, into=(0.37, 0.84)), dict(hex="#cf1126")],
 }

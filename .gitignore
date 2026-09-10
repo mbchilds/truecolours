@@ -3,3 +3,4 @@ node_modules
 .env*.local
 tools/preview/
 preview.html
+work/

@@ -118,13 +118,31 @@ FLAG_SRC=./package python3 tools/build_flags.py
 ```
 
 It prints a line per country (regions, colours, % pre-filled) and writes review images to
-`tools/preview/` so you can eyeball the outlines. Adding or removing a country is a
+`tools/preview/` so you can eyeball the outlines. `FLAG_ONLY=bn,et python3 tools/build_flags.py`
+rebuilds just those countries and splices them into the existing manifest (a full build
+takes about four minutes). The build warns `WARNING <code>: region ... has no clickable
+pixels` if a region ends up too thin to click - never ship a build with that warning, as the
+game would wait for a fill that can't happen.
+
+For a real-rendering check, `npm i playwright && node tools/shot.mjs out/ ir zm:5 --mobile`
+screenshots the play screen for those flags (`:N` fills the first N regions with their
+true colours). Adding or removing a country is a
 one-line change in `tools/countries.py`. **Note:** changing the set of countries
 re-shuffles the daily order, so do that between days rather than mid-day.
 
 The daily flag is chosen by a fixed seeded shuffle of the catalogue, indexed by the
 number of days since `CONFIG.dailyEpoch` in `js/game.js` (Daily #1 = 1 Sep 2026). It
 therefore needs no server and everyone's browser agrees on the flag.
+
+## Outlines
+
+The colouring-book outlines are drawn in `js/flagboard.js`. A *seam* between two fillable
+regions is a 1px grey line on each side; once a region is filled its side of the seam becomes
+a slightly darkened version of the fill colour. Where a fillable region meets pre-filled
+detail (emblem linework, lettering) there is a lighter 1px line on the fillable side only,
+which disappears when the region is filled - so fine detail such as Iran's border script
+does not turn into a black smear. Pre-filled pixels never get ink. Constants at the top of
+the file: `SEAM_INK`, `SEAM_DARKEN`, `DETAIL_INK`.
 
 ## Single-file preview
 

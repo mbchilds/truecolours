@@ -4,7 +4,11 @@
 (function () {
   const C = window.Color;
   const PAPER_A = [244, 244, 241], PAPER_B = [232, 232, 227];   // unfilled hatch
-  const INK = [24, 24, 28];                                       // outline colour
+  // Outlines. A "seam" separates two fillable regions; a "detail edge" is where a
+  // fillable region meets pre-filled detail (emblem linework, lettering...).
+  const SEAM_INK = [118, 120, 126];      // seam colour while the region is unfilled
+  const SEAM_DARKEN = 0.78;              // filled: the seam is the fill colour, darkened
+  const DETAIL_INK = [172, 174, 180];    // detail edge while unfilled; disappears once filled
 
   const Assets = {
     manifest: null,
@@ -60,19 +64,21 @@
     return { w, h, labels };
   }
 
-  // 1 where a pixel sits on a boundary between two regions (thickened to ~3px)
+  // Per pixel: 0 = interior, 1 = seam (fillable/fillable boundary, 1px on each side),
+  // 2 = detail edge (fillable pixel next to pre-filled detail, 1px on the fillable side).
+  // Pre-filled pixels never get ink - they already show the real flag.
   function edgeMask(labels, w, h) {
     const e = new Uint8Array(w * h);
+    const mark = (i, L, M) => {
+      if (L === M) return;
+      if (L && M) { e[i] = 1; }
+      else if (L && !M) { if (!e[i]) e[i] = 2; }
+    };
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x, L = labels[i];
-        if ((x + 1 < w && labels[i + 1] !== L) || (y + 1 < h && labels[i + w] !== L)) {
-          e[i] = 1;
-          if (x + 1 < w) e[i + 1] = 1;
-          if (y + 1 < h) e[i + w] = 1;
-          if (x > 0) e[i - 1] = 1;
-          if (y > 0) e[i - w] = 1;
-        }
+        if (x + 1 < w) { mark(i, L, labels[i + 1]); mark(i + 1, labels[i + 1], L); }
+        if (y + 1 < h) { mark(i, L, labels[i + w]); mark(i + w, labels[i + w], L); }
       }
     }
     return e;
@@ -157,11 +163,13 @@
     for (const [id, hex] of fills) lut[id] = C.hexToRgb(hex);
     for (let i = 0, y = 0, x = 0; i < n; i++) {
       const L = labels[i], o = i * 4;
-      if (edge[i]) { out[o] = INK[0]; out[o + 1] = INK[1]; out[o + 2] = INK[2]; out[o + 3] = 255; }
-      else if (L === 0) { out[o] = base[o]; out[o + 1] = base[o + 1]; out[o + 2] = base[o + 2]; out[o + 3] = base[o + 3]; }
+      if (L === 0) { out[o] = base[o]; out[o + 1] = base[o + 1]; out[o + 2] = base[o + 2]; out[o + 3] = base[o + 3]; }
       else {
-        let c = lut[L];
-        if (!c) c = (((x >> 3) + (y >> 3)) & 1) ? PAPER_A : PAPER_B;
+        const fill = lut[L], ed = edge[i];
+        let c;
+        if (ed === 1) c = fill ? [fill[0] * SEAM_DARKEN, fill[1] * SEAM_DARKEN, fill[2] * SEAM_DARKEN] : SEAM_INK;
+        else if (ed === 2 && !fill) c = DETAIL_INK;
+        else c = fill || ((((x >> 3) + (y >> 3)) & 1) ? PAPER_A : PAPER_B);
         if (L === hover) { out[o] = c[0] * 0.8 + 51; out[o + 1] = c[1] * 0.8 + 51; out[o + 2] = c[2] * 0.8 + 51; }
         else { out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; }
         out[o + 3] = 255;

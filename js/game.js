@@ -306,7 +306,8 @@
 
   // dev hook: TC.play(['pw','np']) starts a quick game with chosen flags
   window.TC = { play(codes) { state.mode = 'quick'; state.round = 0; state.results = []; state.total = 0;
-    state.flags = codes.map(c => manifest.flags.find(f => f.code === c)); beginRound(); }, state, scoreAttempt };
+    state.flags = codes.map(c => manifest.flags.find(f => f.code === c)); beginRound(); }, state, scoreAttempt,
+    get board() { return board; }, get manifest() { return manifest; } };
 
   init().catch(err => { console.error(err); alert('Sorry, the game failed to load: ' + err.message); });
 })();
