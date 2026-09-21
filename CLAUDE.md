@@ -59,3 +59,5 @@ phone) needs to know before touching this repo.
   flag's region map; per-country overrides live here.
 - `tools/shot.mjs` - Playwright screenshot harness for a real-rendering
   check.
+
+phone-approval workflow configured, not yet tested - 21 Sep 2026
