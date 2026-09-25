@@ -62,11 +62,8 @@ h1, h2, h3, .country-name, .big-score, .mode-title { font-family: var(--display)
 /* ---------------------------------------------------------------- home */
 .home-wrap { max-width: 900px; margin: 0 auto; padding: 6vh 24px 40px; min-height: 100vh; min-height: 100dvh; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .logo { display: flex; align-items: center; gap: 22px; }
-.logo-flag { width: 92px; height: 69px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); transform: rotate(-6deg); }
-.logo-flag span { flex: 1; display: block; }
-.logo-flag span:nth-child(1) { background: var(--coral); }
-.logo-flag span:nth-child(2) { background: #f4f4f1; }
-.logo-flag span:nth-child(3) { background: var(--teal); }
+.logo-flag { width: 92px; height: 69px; border-radius: 10px; overflow: hidden; display: block; box-shadow: var(--shadow); transform: rotate(-6deg); background: var(--panel-2); }
+.logo-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 h1 { font-size: clamp(48px, 9vw, 92px); line-height: .9; margin: 0; letter-spacing: -.02em; font-weight: 800; text-align: left; }
 .tagline { color: var(--muted); font-size: clamp(15px, 2vw, 18px); line-height: 1.5; margin: 26px 0 36px; }
 .tagline em { color: var(--gold); font-style: normal; }

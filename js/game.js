@@ -99,6 +99,7 @@
   async function init() {
     manifest = await Assets.manifestLoad();
     dailyOrder = seededShuffle(manifest.flags.slice().sort((a, b) => a.code.localeCompare(b.code)), CONFIG.dailySeed);
+    setLogoFlag();
 
     board = new window.FlagBoard($('flag-canvas'));
     picker = new window.Picker($('picker'), { onChange: hex => { board.currentColour = hex; } });
@@ -123,6 +124,16 @@
   function goHome() {
     state.mode = null; refreshDailyCard(); show('screen-home');
     history.replaceState(null, '', location.pathname);
+  }
+
+  // ----------------------------------------------------------------- home logo (decorative only, unrelated to the daily challenge)
+  function setLogoFlag() {
+    const img = $('logo-flag-img');
+    if (!img) return;
+    const rnd = mulberry32(Number(utcDateKey().replace(/-/g, '')));
+    const pick = manifest.flags[Math.floor(rnd() * manifest.flags.length)];
+    img.src = `flags/${pick.code}.svg`;
+    img.alt = `${pick.name} flag`;
   }
 
   // ----------------------------------------------------------------- daily card
