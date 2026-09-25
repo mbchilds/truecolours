@@ -45,6 +45,16 @@ Every fix falls into exactly one of two tiers. Decide the tier from the
   automatically once `npm run playtest:live` (see below) passes clean
   against the fix. No approval needed for these - that's the whole point
   of this tier.
+  - **Before your first `git push` in a session**, call the `add_repo`
+    tool (`mcp__claude-code-remote__add_repo`, owner `mbchilds`, repo
+    `truecolours`, `access: "push"`). Cloning/reading works without this
+    (the git proxy serves anonymous reads), but pushing needs the repo
+    explicitly attached with push credentials for *this specific
+    session* - a fresh scheduled session doesn't inherit that from any
+    earlier session, and a plain `git push` will 403 with "not in this
+    session's authorized repository set" if you skip this step. This
+    bit a real run on 25 Sep 2026 (a harmless `package-lock.json` commit
+    got stuck unpushed) - don't repeat it.
 - **Always tell Marcus what happened, every run**, even "all good, nothing
   to fix" - never a silent run. If a Gmail connector is available, email
   a short summary to childsmarcus2@gmail.com. Say which tier applied,
