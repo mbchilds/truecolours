@@ -25,10 +25,32 @@
   </script>
 </head>
 <body>
-  <div class="bg-contours" aria-hidden="true"></div>
 
   <!-- ================= HOME ================= -->
   <section id="screen-home" class="screen active">
+    <div class="globe-layer" aria-hidden="true">
+      <div class="globe-glow" style="--gx:-8%; --gy:-6%; --gc:var(--teal); --go:.10;"></div>
+      <div class="globe-glow" style="--gx:88%; --gy:4%; --gc:var(--gold); --go:.08;"></div>
+      <div class="globe-glow" style="--gx:42%; --gy:32%; --gc:var(--coral); --go:.05;"></div>
+      <div class="globe-wrap">
+        <svg id="globe" viewBox="0 0 1600 1600">
+          <defs>
+            <clipPath id="globeClip"><circle cx="800" cy="800" r="760"/></clipPath>
+            <radialGradient id="globeRim" cx="30%" cy="22%" r="75%">
+              <stop offset="0%" stop-color="#2ee6c5" stop-opacity="0.10"/>
+              <stop offset="45%" stop-color="#2ee6c5" stop-opacity="0.02"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0.25"/>
+            </radialGradient>
+          </defs>
+          <circle cx="800" cy="800" r="760" fill="var(--bg-2)"/>
+          <g id="globe-graticule" stroke="var(--teal)" stroke-opacity="0.09" fill="none" stroke-width="1.5" clip-path="url(#globeClip)"></g>
+          <path id="globe-land" fill="var(--panel-2)" fill-rule="nonzero" clip-path="url(#globeClip)" d=""/>
+          <circle cx="800" cy="800" r="760" fill="url(#globeRim)"/>
+          <circle cx="800" cy="800" r="759" fill="none" stroke="var(--teal)" stroke-opacity="0.16" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+
     <div class="home-wrap">
       <div class="logo">
         <div class="logo-flag" aria-hidden="true"><img id="logo-flag-img" alt=""></div>
@@ -49,7 +71,7 @@
         </button>
       </div>
       <button class="link-btn" id="btn-how">How does scoring work?</button>
-      <p class="credits">Flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a> (MIT). Colours judged with CIEDE2000.</p>
+      <p class="credits">Flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a> (MIT). Globe from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public domain). Colours judged with CIEDE2000.</p>
     </div>
   </section>
 
@@ -155,5 +177,6 @@
   <script src="js/picker.js"></script>
   <script src="js/flagboard.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/globe.js"></script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+coastline.json is derived from Natural Earth's 1:110m Cultural/Physical
+Vectors "land" dataset (ne_110m_land), simplified and reduced to bare
+[lon, lat] coastline rings for the homepage background globe.
+
+Natural Earth is public domain. Per https://www.naturalearthdata.com/about/terms-of-use/ :
+"No permission is needed to use Natural Earth. Crediting the authors is
+unnecessary." Credited here anyway as good practice.
+
+Source: https://github.com/nvkelso/natural-earth-vector
