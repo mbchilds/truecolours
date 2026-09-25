@@ -18,51 +18,54 @@ phone) needs to know before touching this repo.
   as a same-day fix.
 
 ## Autonomous operation policy (agreed with Marcus, updated 25 Sep 2026)
-Every fix falls into exactly one of two tiers. Decide the tier from the
-**files the fix touches**, not from how big or scary it feels.
+**This scheduled session cannot push to GitHub, full stop - do not attempt
+`git push`, do not try `add_repo` to get push credentials, do not create or
+push a branch.** This was tested for real on 25 Sep 2026: reading/cloning
+the repo works (the git proxy serves anonymous reads), but push credentials
+require an explicit per-session grant that this scheduled task's sessions
+are never given, and there is no setting that changes that - it's a
+deliberate platform boundary (an unattended task shouldn't be able to grant
+itself write access to a private repo with nobody watching), not a config
+gap to work around. Two earlier runs wasted time discovering this the hard
+way; don't repeat the experiment.
 
-- **Protected paths - always require Marcus's explicit approval before
-  pushing, no exceptions:**
-  - `flags/` (region maps, SVGs, manifest) and `tools/build_flags.py` /
-    `tools/countries.py` - any flag region/colour/grouping change.
-  - `js/color.js` scoring constants (the CIEDE2000 curve / points formula).
-  - `js/game.js` `CONFIG.dailyEpoch`, `CONFIG.dailySeed`, or anything that
-    changes which flag is today's (or any day's) Daily Challenge.
-  - The Google Analytics ID in `index.html`.
-  - `api/daily.js` and anything touching the Redis schema/keys.
-  - Anything the fix's own diff is large, unusual, or you're not fully
-    confident about - when in doubt, treat it as protected.
-  - For these: diagnose, write the fix, commit it to a branch (do **not**
-    push to `main`), and email/flag it to Marcus with a clear diff/link
-    and an explicit note if it touches the *live* daily flag (changing a
-    flag's regions mid-day makes that day's scores inconsistent for
-    players who filled it before vs. after). Wait for his explicit
-    approval before merging/pushing - a push notification and tap, not a
-    rubber stamp assumed in advance.
-- **Everything else (safe) - push to `main` automatically once verified:**
-  plain JS/CSS/HTML bugs, layout issues, copy fixes, non-scoring logic,
-  test/tooling fixes, anything outside the protected paths above. Push
-  automatically once `npm run playtest:live` (see below) passes clean
-  against the fix. No approval needed for these - that's the whole point
-  of this tier.
-  - **Before your first `git push` in a session**, call the `add_repo`
-    tool (`mcp__claude-code-remote__add_repo`, owner `mbchilds`, repo
-    `truecolours`, `access: "push"`). Cloning/reading works without this
-    (the git proxy serves anonymous reads), but pushing needs the repo
-    explicitly attached with push credentials for *this specific
-    session* - a fresh scheduled session doesn't inherit that from any
-    earlier session, and a plain `git push` will 403 with "not in this
-    session's authorized repository set" if you skip this step. This
-    bit a real run on 25 Sep 2026 (a harmless `package-lock.json` commit
-    got stuck unpushed) - don't repeat it.
-- **Always tell Marcus what happened, every run**, even "all good, nothing
-  to fix" - never a silent run. If a Gmail connector is available, email
-  a short summary to childsmarcus2@gmail.com. Say which tier applied,
-  which daily flag was checked, what (if anything) was found/fixed, and
-  whether it's already pushed live or pending approval (with a link/diff).
-- Never touch the Google Analytics ID, scoring constants, or
-  `tools/countries.py`'s country list unless that's the specific fix
-  being made (and remember: those are protected-path changes either way).
+So the routine's job is **diagnose and report, never ship**:
+1. Playtest (see below). If it's clean, say so and stop - nothing more to do.
+2. If you find a bug, write the actual fix in your local working copy (so
+   you can verify it - see below), then capture it with `git diff` (do
+   **not** `git commit`, there's no point committing something that can't
+   be pushed, and it just adds confusing detail to the email). Re-run
+   `npm run playtest:live` against the fixed working copy to confirm it's
+   actually clean now.
+3. Classify the fix by the tier below - this changes what you say in the
+   email, not what you do (you never push either way):
+   - **Protected** - `flags/` (region maps, SVGs, manifest),
+     `tools/build_flags.py` / `tools/countries.py`, `js/color.js` scoring
+     constants, `js/game.js` `CONFIG.dailyEpoch`/`CONFIG.dailySeed` or
+     anything touching which flag is any day's Daily Challenge, the
+     Google Analytics ID in `index.html`, `api/daily.js` or the Redis
+     schema/keys, or anything you're not fully confident about. Say
+     clearly in the email that this needs Marcus's own careful review
+     before it goes anywhere near `main`, and flag explicitly if it
+     touches the *live* daily flag (changing a flag's regions mid-day
+     makes that day's scores inconsistent for players who filled it
+     before vs. after).
+   - **Safe** - everything else (plain JS/CSS/HTML bugs, layout issues,
+     copy fixes, non-scoring logic, test/tooling fixes). Say it's
+     low-risk and ready to apply as-is - Marcus (or a live Claude Code
+     session, which does have real push access, unlike you) can apply
+     the diff and push it without much extra scrutiny.
+4. **Always tell Marcus what happened, every run**, even "all good,
+   nothing to fix" - never a silent run. If a Gmail connector is
+   available, email a short summary to childsmarcus2@gmail.com. Include:
+   which daily flag was checked, what (if anything) was found, the tier,
+   and - if you have a fix - the **full `git diff` output pasted directly
+   in the email body** (a fenced code block is fine) so it can be applied
+   with `git apply` without anyone needing to reach into a disposable
+   session's workspace that won't exist by the time they read the email.
+5. Never touch the Google Analytics ID, scoring constants, or
+   `tools/countries.py`'s country list unless that's the specific fix
+   being made (and remember: those are protected-tier either way).
 
 ## Playtesting a daily flag
 - Run `npm install && npm run playtest:live` (`tools/playtest_live.mjs`).
@@ -92,7 +95,7 @@ Every fix falls into exactly one of two tiers. Decide the tier from the
   playtest. Use it for local rendering checks, use `playtest_live.mjs` for
   the actual daily routine.
 - A region with "no clickable pixels" (see README's flag-build section)
-  should never ship - that's a real bug worth fixing and pushing.
+  should never ship - that's a real bug worth fixing.
 
 ## Where to look
 - `README.md` - full project docs: architecture, scoring formula, the
@@ -102,10 +105,20 @@ Every fix falls into exactly one of two tiers. Decide the tier from the
 - `tools/playtest_live.mjs` - the daily routine's live playtest (see
   above). `tools/shot.mjs` - local-only screenshot harness for dev use.
 
-phone-approval workflow configured and tiered (safe auto-push / protected
-approval-gated) - 25 Sep 2026. Note: this scheduled task still needs
-"Automatically approve" turned on in its own settings for the safe-tier
-auto-push to actually go through unattended - without that, the platform's
-permission gate will stop and wait even for safe-path pushes. The tiering
-above is what keeps that safe, since protected-path changes are never
-pushed by this routine regardless of that setting.
+## Applying a fix from a routine email (for Marcus, or a live Claude session)
+The scheduled routine only ever diagnoses and emails a diff - it never
+pushes (see "Autonomous operation policy" above for why). To actually ship
+a fix it found:
+1. Read the diff in the email carefully if it's protected-tier; a
+   safe-tier one needs less scrutiny but still worth a glance.
+2. In a live session with real push access to this repo (Marcus's own
+   `git`/VS Code, or a live Claude Code chat), save the diff to a file and
+   run `git apply <file>`, or apply it by hand if it's short.
+3. Commit and push to `main` as normal - there's no PR/review step, a push
+   to `main` is how it goes live.
+
+History: this used to be designed as an auto-push routine (agreed with
+Marcus 21 Sep 2026, tiered safe/protected 25 Sep 2026), but testing on 25
+Sep 2026 found the scheduled session can never get push credentials for
+itself - see "Autonomous operation policy" above. The diagnose-and-email
+design replaced it the same day.
