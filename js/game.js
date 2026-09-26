@@ -62,21 +62,36 @@
       groups.get(r.hex).regions.push(r);
     }
     const out = [];
+    const rows = [];
     for (const g of groups.values()) {
       let totalArea = 0, weighted = 0, best = null;
+      const byFill = new Map();
       for (const r of g.regions) {
         const yours = fills.get(r.id) || '#f4f4f1';
         const pts = C.pointsFor(C.hexDistance(yours, g.hex));
         weighted += pts * r.area; totalArea += r.area;
         if (!best || r.area > best.area) best = { area: r.area, hex: yours };
+        if (!byFill.has(yours)) byFill.set(yours, { yours, points: pts, area: 0, count: 0 });
+        const fillGroup = byFill.get(yours);
+        fillGroup.area += r.area; fillGroup.count += 1;
       }
       const points = Math.round(weighted / totalArea);
-      const mixed = new Set(g.regions.map(r => fills.get(r.id))).size > 1;
+      const mixed = byFill.size > 1;
       out.push({ hex: g.hex, yours: best.hex, points, verdict: C.verdict(points), mixed, area: totalArea });
+      // Breakdown detail: one row per distinct fill used within this colour, so
+      // a wrongly-coloured region shows up on its own rather than being
+      // averaged away into the rest of the same-coloured regions.
+      for (const fillGroup of [...byFill.values()].sort((a, b) => b.area - a.area)) {
+        rows.push({
+          hex: g.hex, yours: fillGroup.yours, points: fillGroup.points,
+          verdict: C.verdict(fillGroup.points), count: fillGroup.count, groupArea: totalArea, area: fillGroup.area,
+        });
+      }
     }
     out.sort((a, b) => b.area - a.area);
+    rows.sort((a, b) => b.groupArea - a.groupArea || b.area - a.area);
     const points = Math.round(out.reduce((s, g) => s + g.points, 0) / out.length);
-    return { points, groups: out };
+    return { points, groups: out, rows };
   }
   function emojiBar(groups) {
     return groups.map(g => g.points >= 900 ? '🟩' : g.points >= 600 ? '🟨' : g.points >= 300 ? '🟧' : '🟥').join('');
@@ -232,14 +247,14 @@
     const ac = $('result-actual'); ac.width = flag.w; ac.height = flag.h;
     ac.getContext('2d').drawImage(flag.img, 0, 0, flag.w, flag.h);
 
-    $('breakdown').innerHTML = result.groups.map(g => `
+    $('breakdown').innerHTML = result.rows.map(g => `
       <div class="bd-row">
         <div class="bd-swatches">
           <span class="sw" style="background:${g.yours}" title="Yours ${g.yours}"></span>
           <span class="sw-arrow">→</span>
           <span class="sw" style="background:${g.hex}" title="Actual ${g.hex}"></span>
         </div>
-        <div class="bd-name">${C.describe(g.hex)}${g.mixed ? ' <small>(mixed fills)</small>' : ''}<small>${g.yours.toUpperCase()} vs ${g.hex.toUpperCase()}</small></div>
+        <div class="bd-name">${C.describe(g.hex)}${g.count > 1 ? ` <small>(×${g.count} regions)</small>` : ''}<small>${g.yours.toUpperCase()} vs ${g.hex.toUpperCase()}</small></div>
         <div class="bd-verdict v-${g.verdict.replace(/\s/g, '').toLowerCase()}">${g.verdict}</div>
         <div class="bd-points">${g.points}</div>
       </div>`).join('');
