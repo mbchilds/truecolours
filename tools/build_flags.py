@@ -13,7 +13,7 @@ For every country it:
 
 Tune PREFILL_THRESHOLD and re-run:  python3 tools/build_flags.py
 """
-import json, os, struct, sys, io
+import hashlib, json, os, struct, sys, io
 import numpy as np
 from PIL import Image
 from scipy import ndimage
@@ -359,6 +359,15 @@ def main():
         old = json.load(open(mpath))["flags"]
         new = {m["code"]: m for m in manifest}
         manifest = [new.pop(m["code"], m) for m in old] + list(new.values())
+    # Per-flag cache-busting version: the game requests flags/<code>.bin|svg?v=<v>, so a flag's region
+    # map is only ever paired with the manifest entry that describes it (hosting caches /flags/ for
+    # a day, so unversioned files could otherwise get out of step with a stale manifest).
+    for m in manifest:
+        m.pop("v", None)
+        h = hashlib.sha1(json.dumps(m, sort_keys=True).encode())
+        for ext in ("bin", "svg"):
+            with open(os.path.join(OUT, f"{m['code']}.{ext}"), "rb") as fh: h.update(fh.read())
+        m["v"] = h.hexdigest()[:8]
     with open(mpath, "w") as f:
         json.dump({"width": W, "height": H, "threshold": PREFILL_THRESHOLD, "excluded": sorted(EXCLUDED), "flags": manifest}, f, separators=(",", ":"))
     print(f"\n{len(manifest)} flags written to {os.path.abspath(OUT)}")

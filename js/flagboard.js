@@ -16,8 +16,18 @@
     async manifestLoad() {
       if (this.manifest) return this.manifest;
       if (window.EMBEDDED_FLAGS) this.manifest = window.EMBEDDED_FLAGS.manifest;
-      else this.manifest = await (await fetch('flags/manifest.json')).json();
+      // Always revalidate the manifest (a cheap 304 when unchanged): it must never be older than the
+      // .bin files it describes, or a flag can show more regions than the player can click.
+      else this.manifest = await (await fetch('flags/manifest.json', { cache: 'no-cache' })).json();
+      this.versions = {};
+      for (const f of this.manifest.flags) this.versions[f.code] = f.v;
       return this.manifest;
+    },
+    // Each flag's files are requested with ?v=<hash of that flag's files> (from the manifest), so a
+    // cached region map can only ever be paired with the manifest entry that describes it.
+    url(code, ext) {
+      const v = this.versions && this.versions[code];
+      return `flags/${code}.${ext}` + (v ? `?v=${v}` : '');
     },
     async loadFlag(code) {
       if (this.cache.has(code)) return this.cache.get(code);
@@ -40,14 +50,14 @@
         for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
         return u.buffer;
       }
-      return (await fetch(`flags/${code}.bin`)).arrayBuffer();
+      return (await fetch(this.url(code, 'bin'))).arrayBuffer();
     },
     loadSvg(code) {
       return new Promise((res, rej) => {
         const img = new Image();
         img.onload = () => res(img);
         img.onerror = rej;
-        img.src = window.EMBEDDED_FLAGS ? window.EMBEDDED_FLAGS.svg[code] : `flags/${code}.svg`;
+        img.src = window.EMBEDDED_FLAGS ? window.EMBEDDED_FLAGS.svg[code] : this.url(code, 'svg');
       });
     },
   };

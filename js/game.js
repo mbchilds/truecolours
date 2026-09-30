@@ -154,7 +154,7 @@
     if (!img) return;
     const rnd = mulberry32(Number(utcDateKey().replace(/-/g, '')));
     const pick = manifest.flags[Math.floor(rnd() * manifest.flags.length)];
-    img.src = `flags/${pick.code}.svg`;
+    img.src = Assets.url(pick.code, 'svg');
     img.alt = `${pick.name} flag`;
   }
 

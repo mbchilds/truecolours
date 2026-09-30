@@ -139,7 +139,7 @@
     $('fc-country').textContent = meta.name.toUpperCase();
     $('fc-progress').textContent = `${idx + 1} / ${order.length}`;
     $('fc-select').value = idx;
-    $('fc-truth-img').src = `flags/${meta.code}.svg`;
+    $('fc-truth-img').src = Assets.url(meta.code, 'svg');
     $('fc-truth-img').alt = `${meta.name} flag`;
     const done = isMarked(meta.code);
     $('fc-fine').classList.toggle('is-done', done);
