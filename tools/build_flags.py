@@ -20,7 +20,7 @@ from scipy import ndimage
 import resvg_py
 
 sys.path.insert(0, os.path.dirname(__file__))
-from countries import CODES, NAME_OVERRIDES, STRICT, THRESHOLDS, GROUPS
+from countries import CODES, NAME_OVERRIDES, STRICT, THRESHOLDS, GROUPS, EXCLUDED
 
 # ---------------------------------------------------------------- settings
 W, H = 800, 600                 # internal canvas size (flag-icons are 4:3)
@@ -205,6 +205,8 @@ def apply_groups(labels, idx, palette, groups, threshold):
             sl = objs[r - 1]
             if g.get("minor") and area >= threshold: continue
             if g.get("major") and area < threshold: continue
+            if g.get("below") and area >= g["below"]: continue
+            if g.get("above") and area < g["above"]: continue
             if g.get("boxes"):
                 x0, x1 = sl[1].start / W, sl[1].stop / W
                 y0, y1 = sl[0].start / H, sl[0].stop / H
@@ -358,7 +360,7 @@ def main():
         new = {m["code"]: m for m in manifest}
         manifest = [new.pop(m["code"], m) for m in old] + list(new.values())
     with open(mpath, "w") as f:
-        json.dump({"width": W, "height": H, "threshold": PREFILL_THRESHOLD, "flags": manifest}, f, separators=(",", ":"))
+        json.dump({"width": W, "height": H, "threshold": PREFILL_THRESHOLD, "excluded": sorted(EXCLUDED), "flags": manifest}, f, separators=(",", ":"))
     print(f"\n{len(manifest)} flags written to {os.path.abspath(OUT)}")
 
 
