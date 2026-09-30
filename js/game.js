@@ -108,12 +108,19 @@
 
   // ----------------------------------------------------------------- state
   const state = { mode: null, round: 0, flags: [], results: [], total: 0, meta: null };
-  let manifest, board, picker, dailyOrder;
+  let manifest, board, picker, dailyOrder, dailySubstitutes, excluded;
 
   // ----------------------------------------------------------------- boot
   async function init() {
     manifest = await Assets.manifestLoad();
-    dailyOrder = seededShuffle(manifest.flags.slice().sort((a, b) => a.code.localeCompare(b.code)), CONFIG.dailySeed);
+    // Flags listed in manifest.excluded (tools/countries.py EXCLUDED) are temporarily out of play.
+    // The Daily order is still shuffled from the FULL catalogue, so every other day keeps its flag;
+    // only days that land on an excluded flag are swapped for a substitute (a second fixed shuffle
+    // of the playable flags), so removing or restoring a flag never reshuffles the calendar.
+    excluded = new Set(manifest.excluded || []);
+    const byCode = manifest.flags.slice().sort((a, b) => a.code.localeCompare(b.code));
+    dailyOrder = seededShuffle(byCode, CONFIG.dailySeed);
+    dailySubstitutes = seededShuffle(byCode.filter(f => !excluded.has(f.code)), CONFIG.dailySeed + 1);
     setLogoFlag();
 
     board = new window.FlagBoard($('flag-canvas'));
@@ -154,7 +161,9 @@
   // ----------------------------------------------------------------- daily card
   function todaysDaily() {
     const n = dayNumber();
-    return { number: n + 1, meta: dailyOrder[((n % dailyOrder.length) + dailyOrder.length) % dailyOrder.length], key: utcDateKey() };
+    let meta = dailyOrder[((n % dailyOrder.length) + dailyOrder.length) % dailyOrder.length];
+    if (excluded.has(meta.code)) meta = dailySubstitutes[((n % dailySubstitutes.length) + dailySubstitutes.length) % dailySubstitutes.length];
+    return { number: n + 1, meta, key: utcDateKey() };
   }
   function refreshDailyCard() {
     const d = todaysDaily(), played = store.get('daily:' + d.key);
@@ -181,7 +190,7 @@
     beginRound();
   }
   function startQuick() {
-    const pool = manifest.flags.slice();
+    const pool = manifest.flags.filter(f => !excluded.has(f.code));
     const picks = [];
     while (picks.length < CONFIG.rounds && pool.length) picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     state.mode = 'quick'; state.round = 0; state.flags = picks; state.results = []; state.total = 0;
