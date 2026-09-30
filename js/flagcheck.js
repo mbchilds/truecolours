@@ -11,7 +11,7 @@
   // fine/index: the "All flags" pass. verified/indexChanged: the "Changed" view - flags whose
   // regions were reworked and need re-checking (a separate tick, so an old "fine" mark on a
   // since-changed flag doesn't count as checked).
-  function blankStatus() { return { fine: {}, notes: {}, index: 0, verified: {}, indexChanged: 0, mode: null }; }
+  function blankStatus() { return { fine: {}, notes: {}, index: 0, verified: {}, indexChanged: 0, manualDone: {}, indexManual: 0, mode: null }; }
   function loadStatus() {
     try {
       const v = JSON.parse(localStorage.getItem(STORE_KEY));
@@ -59,8 +59,12 @@
   }
 
   let manifest, allOrder, order, status, idx, board, picker, changedSet = new Set(), changedLabel = '';
+  // "Manual rework" view: the flags currently removed from the game (manifest.excluded), with a
+  // short reason for each from flagcheck-manual.json. Its own "signed off" tick, separate from fine.
+  let manualSet = new Set(), manualReasons = {};
   const inChanged = () => status.mode === 'changed';
-  const marks = () => (inChanged() ? status.verified : status.fine);
+  const inManual = () => status.mode === 'manual';
+  const marks = () => (inChanged() ? status.verified : inManual() ? status.manualDone : status.fine);
   // A flag changed again after you re-checked it (its revision in flagcheck-changed.json went up)
   // needs a fresh re-check, so a re-check tick only counts if it's for the current revision.
   let revs = {};
@@ -69,7 +73,7 @@
     const v = status.verified[code];
     return !!v && (typeof v === 'string' ? 1 : v.r) >= revOf(code);
   }
-  const isMarked = code => (inChanged() ? isVerified(code) : !!status.fine[code]);
+  const isMarked = code => (inChanged() ? isVerified(code) : inManual() ? !!status.manualDone[code] : !!status.fine[code]);
 
   async function init() {
     manifest = await Assets.manifestLoad();
@@ -79,9 +83,13 @@
       const c = await (await fetch('flagcheck-changed.json?v=' + Date.now())).json();
       changedSet = new Set(c.codes); changedLabel = c.label || ''; revs = c.revisions || {};
     } catch (e) { /* no changed list: the option stays hidden */ }
+    manualSet = new Set(manifest.excluded || []);
+    try { manualReasons = (await (await fetch('flagcheck-manual.json?v=' + Date.now())).json()).reasons || {}; } catch (e) { /* reasons are optional */ }
     if (changedSet.size) $('fc-mode-changed').hidden = false;
-    if (!changedSet.size) status.mode = 'all';
-    else if (!status.mode) status.mode = 'changed';
+    if (manualSet.size) $('fc-mode-manual').hidden = false;
+    if (status.mode === 'changed' && !changedSet.size) status.mode = 'all';
+    if (status.mode === 'manual' && !manualSet.size) status.mode = 'all';
+    if (!status.mode) status.mode = changedSet.size ? 'changed' : 'all';
     applyMode(false);
 
     board = new window.FlagBoard($('flag-canvas'));
@@ -109,13 +117,14 @@
 
   // Switch between the full catalogue and just the flags changed in the latest pass.
   function applyMode(reload) {
-    order = inChanged() ? allOrder.filter(f => changedSet.has(f.code)) : allOrder;
-    const saved = inChanged() ? status.indexChanged : status.index;
+    order = inChanged() ? allOrder.filter(f => changedSet.has(f.code)) : inManual() ? allOrder.filter(f => manualSet.has(f.code)) : allOrder;
+    const saved = inChanged() ? status.indexChanged : inManual() ? status.indexManual : status.index;
     idx = Math.min(Math.max(saved || 0, 0), order.length - 1);
     $('fc-mode').value = status.mode;
     $('fc-mode-changed').textContent = `Changed - to re-check (${changedSet.size})`;
-    $('fc-chip-label').textContent = inChanged() ? 'Re-checked' : 'Marked fine';
-    $('fc-reset').textContent = inChanged() ? 'Reset all re-check ticks' : 'Reset all "fine" marks';
+    $('fc-mode-manual').textContent = `Manual rework - removed from play (${manualSet.size})`;
+    $('fc-chip-label').textContent = inChanged() ? 'Re-checked' : inManual() ? 'Signed off' : 'Marked fine';
+    $('fc-reset').textContent = inChanged() ? 'Reset all re-check ticks' : inManual() ? 'Reset all sign-offs' : 'Reset all "fine" marks';
     buildSelect();
     if (reload) load(idx);
   }
@@ -127,13 +136,13 @@
       return `<option value="${i}">${mark ? mark + ' ' : ''}${f.name}</option>`;
     }).join('');
     sel.value = idx;
-    $('fc-fine-count').textContent = fineCount() + (inChanged() ? ' / ' + order.length : '');
+    $('fc-fine-count').textContent = fineCount() + (inChanged() || inManual() ? ' / ' + order.length : '');
   }
 
   async function load(i) {
     flushNote();
     idx = i;
-    if (inChanged()) status.indexChanged = i; else status.index = i;
+    if (inChanged()) status.indexChanged = i; else if (inManual()) status.indexManual = i; else status.index = i;
     saveStatus();
     const meta = order[idx];
     $('fc-country').textContent = meta.name.toUpperCase();
@@ -143,10 +152,16 @@
     $('fc-truth-img').alt = `${meta.name} flag`;
     const done = isMarked(meta.code);
     $('fc-fine').classList.toggle('is-done', done);
-    $('fc-fine').textContent = done ? (inChanged() ? '✓ Re-checked (click to undo)' : '✓ Marked fine (click to undo)')
-                                    : (inChanged() ? '✓ Looks good now' : '✓ Flag is fine');
-    $('fc-badge').hidden = !changedSet.has(meta.code);
-    $('fc-badge').textContent = `Changed in the latest pass${changedLabel ? ' (' + changedLabel + ')' : ''} - please re-check`;
+    $('fc-fine').textContent = done ? (inChanged() ? '✓ Re-checked (click to undo)' : inManual() ? '✓ Signed off (click to undo)' : '✓ Marked fine (click to undo)')
+                                    : (inChanged() ? '✓ Looks good now' : inManual() ? '✓ Manual fix done' : '✓ Flag is fine');
+    const badge = $('fc-badge');
+    if (manualSet.has(meta.code)) {
+      badge.hidden = false;
+      badge.textContent = 'Removed from play - needs manual rework' + (manualReasons[meta.code] ? ': ' + manualReasons[meta.code] : '');
+    } else if (changedSet.has(meta.code)) {
+      badge.hidden = false;
+      badge.textContent = `Changed in the latest pass${changedLabel ? ' (' + changedLabel + ')' : ''} - please re-check`;
+    } else badge.hidden = true;
     $('fc-notes-input').value = status.notes[meta.code] || '';
     $('fc-notes-status').textContent = '';
     $('prefill-note').hidden = !(meta.prefilled > 0);
@@ -189,13 +204,13 @@
     const code = order[idx].code;
     if (isMarked(code)) {
       delete marks()[code];
-      if (inChanged()) delete status.fine[code];
+      if (inChanged() || inManual()) delete status.fine[code];
       saveStatus(); buildSelect(); load(idx);
       return;
     }
     const now = new Date().toISOString();
     marks()[code] = inChanged() ? { t: now, r: revOf(code) } : now;
-    if (inChanged()) status.fine[code] = now;   // (a re-check also counts as fine)
+    if (inChanged() || inManual()) status.fine[code] = now;   // (a re-check / sign-off also counts as fine)
     saveStatus();
     buildSelect();
     load((idx + 1) % order.length);
@@ -203,8 +218,10 @@
 
   function resetProgress() {
     if (!confirm(inChanged() ? 'Clear every re-check tick in the Changed view? (Notes and the main "fine" marks are kept.)'
+               : inManual() ? 'Clear every sign-off in the Manual rework view? (Notes and the main "fine" marks are kept.)'
                               : 'Clear every "flag is fine" mark on this device and start the review over? (Your notes are kept.)')) return;
     if (inChanged()) { status.verified = {}; status.indexChanged = 0; }
+    else if (inManual()) { status.manualDone = {}; status.indexManual = 0; }
     else { status.fine = {}; status.index = 0; }
     saveStatus();
     applyMode(true);
@@ -241,7 +258,7 @@
       const note = (status.notes[f.code] || '').trim();
       if (!note) continue;
       count++;
-      const tags = [status.fine[f.code] && 'marked fine', changedSet.has(f.code) && (isVerified(f.code) ? 're-checked after change' : 'changed, not yet re-checked')].filter(Boolean);
+      const tags = [status.fine[f.code] && 'marked fine', manualSet.has(f.code) && (status.manualDone[f.code] ? 'manual rework: signed off' : 'removed from play, manual rework pending'), changedSet.has(f.code) && (isVerified(f.code) ? 're-checked after change' : 'changed, not yet re-checked')].filter(Boolean);
       lines.push(`[${f.code}] ${f.name}${tags.length ? ' (' + tags.join('; ') + ')' : ''}`, note, '');
     }
     if (!count) lines.push('(no notes written yet)');
