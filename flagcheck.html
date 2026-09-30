@@ -21,6 +21,8 @@
       font: 600 14px var(--body); color: var(--text); background: var(--panel); border: 1px solid var(--line);
       border-radius: 10px; padding: 9px 12px; max-width: 46vw;
     }
+    .fc-jumpwrap { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+    .fc-badge { text-align: center; color: var(--gold); font: 700 12px var(--body); letter-spacing: .1em; text-transform: uppercase; margin: -8px 0 12px; }
     .fc-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
     .fc-buttons .btn { padding: 12px 20px; }
     #fc-fine.is-done { background: linear-gradient(135deg, #2ee6c5, #1fb894); color: #06231d; box-shadow: 0 8px 24px rgba(46, 230, 197, .3); }
@@ -63,11 +65,17 @@
   <section class="screen active" id="screen-check">
     <header class="topbar">
       <div class="round-label">Flag check · <span id="fc-progress">1 / 1</span></div>
-      <div class="score-chip"><span class="score-chip-label">Marked fine</span><span id="fc-fine-count">0</span></div>
+      <div class="score-chip"><span class="score-chip-label" id="fc-chip-label">Marked fine</span><span id="fc-fine-count">0</span></div>
     </header>
 
     <div class="fc-controls">
-      <label class="fc-jump">Jump to <select id="fc-select"></select></label>
+      <div class="fc-jumpwrap">
+        <label class="fc-jump">Show <select id="fc-mode">
+          <option value="all">All flags</option>
+          <option value="changed" id="fc-mode-changed" hidden>Changed - to re-check</option>
+        </select></label>
+        <label class="fc-jump">Jump to <select id="fc-select"></select></label>
+      </div>
       <div class="fc-buttons">
         <button class="btn ghost" id="fc-skip">Skip ›</button>
         <button class="btn primary" id="fc-fine">✓ Flag is fine</button>
@@ -84,6 +92,7 @@
 
       <div class="flag-col">
         <h2 class="country-name" id="fc-country">COUNTRY</h2>
+        <p class="fc-badge" id="fc-badge" hidden>Changed in the latest pass - please re-check</p>
         <div class="flag-frame">
           <canvas id="flag-canvas" width="800" height="600" aria-label="Flag to colour in"></canvas>
           <div class="flag-loading" id="flag-loading"><div class="spinner"></div></div>

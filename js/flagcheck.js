@@ -8,11 +8,15 @@
   const $ = id => document.getElementById(id);
   const STORE_KEY = 'tc:flagcheck';
 
+  // fine/index: the "All flags" pass. verified/indexChanged: the "Changed" view - flags whose
+  // regions were reworked and need re-checking (a separate tick, so an old "fine" mark on a
+  // since-changed flag doesn't count as checked).
+  function blankStatus() { return { fine: {}, notes: {}, index: 0, verified: {}, indexChanged: 0, mode: null }; }
   function loadStatus() {
     try {
       const v = JSON.parse(localStorage.getItem(STORE_KEY));
-      return v && v.fine ? Object.assign({ fine: {}, notes: {}, index: 0 }, v) : { fine: {}, notes: {}, index: 0 };
-    } catch (e) { return { fine: {}, notes: {}, index: 0 }; }
+      return v && v.fine ? Object.assign(blankStatus(), v) : blankStatus();
+    } catch (e) { return blankStatus(); }
   }
   function saveStatus() { try { localStorage.setItem(STORE_KEY, JSON.stringify(status)); } catch (e) { /* private mode */ } }
 
@@ -54,13 +58,31 @@
     return { points, rows };
   }
 
-  let manifest, order, status, idx, board, picker;
+  let manifest, allOrder, order, status, idx, board, picker, changedSet = new Set(), changedLabel = '';
+  const inChanged = () => status.mode === 'changed';
+  const marks = () => (inChanged() ? status.verified : status.fine);
+  // A flag changed again after you re-checked it (its revision in flagcheck-changed.json went up)
+  // needs a fresh re-check, so a re-check tick only counts if it's for the current revision.
+  let revs = {};
+  const revOf = code => revs[code] || 1;
+  function isVerified(code) {
+    const v = status.verified[code];
+    return !!v && (typeof v === 'string' ? 1 : v.r) >= revOf(code);
+  }
+  const isMarked = code => (inChanged() ? isVerified(code) : !!status.fine[code]);
 
   async function init() {
     manifest = await Assets.manifestLoad();
-    order = manifest.flags.slice().sort((a, b) => a.name.localeCompare(b.name));
+    allOrder = manifest.flags.slice().sort((a, b) => a.name.localeCompare(b.name));
     status = loadStatus();
-    idx = Math.min(Math.max(status.index || 0, 0), order.length - 1);
+    try {
+      const c = await (await fetch('flagcheck-changed.json?v=' + Date.now())).json();
+      changedSet = new Set(c.codes); changedLabel = c.label || ''; revs = c.revisions || {};
+    } catch (e) { /* no changed list: the option stays hidden */ }
+    if (changedSet.size) $('fc-mode-changed').hidden = false;
+    if (!changedSet.size) status.mode = 'all';
+    else if (!status.mode) status.mode = 'changed';
+    applyMode(false);
 
     board = new window.FlagBoard($('flag-canvas'));
     picker = new window.Picker($('picker'), { onChange: hex => { board.currentColour = hex; } });
@@ -69,6 +91,7 @@
 
     buildSelect();
     $('fc-select').addEventListener('change', e => load(+e.target.value));
+    $('fc-mode').addEventListener('change', e => { flushNote(); status.mode = e.target.value; applyMode(true); });
     $('fc-skip').addEventListener('click', () => load((idx + 1) % order.length));
     $('fc-fine').addEventListener('click', markFine);
     $('btn-clear').addEventListener('click', () => { board.clear(); updateProgress(); $('fc-score').hidden = true; });
@@ -82,29 +105,48 @@
     await load(idx);
   }
 
-  function fineCount() { return Object.keys(status.fine).length; }
+  function fineCount() { return order.filter(f => isMarked(f.code)).length; }
+
+  // Switch between the full catalogue and just the flags changed in the latest pass.
+  function applyMode(reload) {
+    order = inChanged() ? allOrder.filter(f => changedSet.has(f.code)) : allOrder;
+    const saved = inChanged() ? status.indexChanged : status.index;
+    idx = Math.min(Math.max(saved || 0, 0), order.length - 1);
+    $('fc-mode').value = status.mode;
+    $('fc-mode-changed').textContent = `Changed - to re-check (${changedSet.size})`;
+    $('fc-chip-label').textContent = inChanged() ? 'Re-checked' : 'Marked fine';
+    $('fc-reset').textContent = inChanged() ? 'Reset all re-check ticks' : 'Reset all "fine" marks';
+    buildSelect();
+    if (reload) load(idx);
+  }
 
   function buildSelect() {
     const sel = $('fc-select');
     sel.innerHTML = order.map((f, i) => {
-      const mark = (status.fine[f.code] ? '✓' : '') + (status.notes[f.code] ? '✎' : '');
+      const mark = (isMarked(f.code) ? '✓' : '') + (status.notes[f.code] ? '✎' : '');
       return `<option value="${i}">${mark ? mark + ' ' : ''}${f.name}</option>`;
     }).join('');
-    $('fc-fine-count').textContent = fineCount();
+    sel.value = idx;
+    $('fc-fine-count').textContent = fineCount() + (inChanged() ? ' / ' + order.length : '');
   }
 
   async function load(i) {
     flushNote();
-    idx = i; status.index = i; saveStatus();
+    idx = i;
+    if (inChanged()) status.indexChanged = i; else status.index = i;
+    saveStatus();
     const meta = order[idx];
     $('fc-country').textContent = meta.name.toUpperCase();
     $('fc-progress').textContent = `${idx + 1} / ${order.length}`;
     $('fc-select').value = idx;
     $('fc-truth-img').src = `flags/${meta.code}.svg`;
     $('fc-truth-img').alt = `${meta.name} flag`;
-    const done = !!status.fine[meta.code];
+    const done = isMarked(meta.code);
     $('fc-fine').classList.toggle('is-done', done);
-    $('fc-fine').textContent = done ? '✓ Marked fine' : '✓ Flag is fine';
+    $('fc-fine').textContent = done ? (inChanged() ? '✓ Re-checked (click to undo)' : '✓ Marked fine (click to undo)')
+                                    : (inChanged() ? '✓ Looks good now' : '✓ Flag is fine');
+    $('fc-badge').hidden = !changedSet.has(meta.code);
+    $('fc-badge').textContent = `Changed in the latest pass${changedLabel ? ' (' + changedLabel + ')' : ''} - please re-check`;
     $('fc-notes-input').value = status.notes[meta.code] || '';
     $('fc-notes-status').textContent = '';
     $('prefill-note').hidden = !(meta.prefilled > 0);
@@ -140,19 +182,32 @@
       </div>`).join('');
   }
 
+  // Clicking an already-marked flag undoes the mark (and stays put); otherwise it marks the
+  // flag and moves on. In the Changed view the mark is the separate "re-checked" tick, which
+  // also counts as fine in the main list.
   function markFine() {
-    status.fine[order[idx].code] = new Date().toISOString();
+    const code = order[idx].code;
+    if (isMarked(code)) {
+      delete marks()[code];
+      if (inChanged()) delete status.fine[code];
+      saveStatus(); buildSelect(); load(idx);
+      return;
+    }
+    const now = new Date().toISOString();
+    marks()[code] = inChanged() ? { t: now, r: revOf(code) } : now;
+    if (inChanged()) status.fine[code] = now;   // (a re-check also counts as fine)
     saveStatus();
     buildSelect();
     load((idx + 1) % order.length);
   }
 
   function resetProgress() {
-    if (!confirm('Clear every "flag is fine" mark on this device and start the review over? (Your notes are kept.)')) return;
-    status = { fine: {}, notes: status.notes, index: 0 };
+    if (!confirm(inChanged() ? 'Clear every re-check tick in the Changed view? (Notes and the main "fine" marks are kept.)'
+                              : 'Clear every "flag is fine" mark on this device and start the review over? (Your notes are kept.)')) return;
+    if (inChanged()) { status.verified = {}; status.indexChanged = 0; }
+    else { status.fine = {}; status.index = 0; }
     saveStatus();
-    buildSelect();
-    load(0);
+    applyMode(true);
   }
 
   // ----------------------------------------------------------------- notes
@@ -186,7 +241,8 @@
       const note = (status.notes[f.code] || '').trim();
       if (!note) continue;
       count++;
-      lines.push(`[${f.code}] ${f.name}${status.fine[f.code] ? ' (marked fine)' : ''}`, note, '');
+      const tags = [status.fine[f.code] && 'marked fine', changedSet.has(f.code) && (isVerified(f.code) ? 're-checked after change' : 'changed, not yet re-checked')].filter(Boolean);
+      lines.push(`[${f.code}] ${f.name}${tags.length ? ' (' + tags.join('; ') + ')' : ''}`, note, '');
     }
     if (!count) lines.push('(no notes written yet)');
     const text = lines.join('\n');
