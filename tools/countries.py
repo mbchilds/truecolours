@@ -338,4 +338,6 @@ GROUPS = {
     "uz": [dict(hex="#ffffff", boxes=[(0.0, 0.0, 0.7, 0.4)])],
     # Vanuatu: the crossed fronds join the tusk swirl
     "vu": [dict(hex="#fdce12", boxes=[(0.0, 0.3, 0.3, 0.72)])],
+    # Argentina: the Sun of May (disc and all its rays) is one playable piece; its brown facial linework stays fixed
+    "ar": [dict(hex="#f6b40e"), dict(hex="#85340a", into="prefill")],
 }
