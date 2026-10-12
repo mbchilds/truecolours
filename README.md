@@ -9,6 +9,8 @@ how close each of your colours is to the real thing.
   player. One attempt. Shows your score, the average, how many players you beat, and a
   share button.
 * **Quick Play** - five random flags, no repeats, up to 5,000 points.
+* **Streaks** - play the Daily Challenge (or finish a Quick Play game) on consecutive days to
+  build a streak. See "Streaks" below.
 
 Everything is plain HTML/CSS/JS - no build step, no framework. It runs on Vercel with
 one serverless function for the daily-challenge stats.
@@ -19,6 +21,7 @@ one serverless function for the daily-challenge stats.
 index.html          the whole UI (all screens are sections toggled by game.js)
 style.css           theme + layout
 js/color.js         colour maths: HSV/RGB/Lab conversions, CIEDE2000, points curve
+js/streak.js        consecutive-day streak maths (pure functions, no DOM or storage)
 js/picker.js        the colour picker component
 js/flagboard.js     loads a flag's region map and draws / fills the canvas
 js/game.js          screens, modes, scoring, daily challenge, share, analytics events
@@ -29,6 +32,7 @@ api/daily.js        Vercel serverless function (daily scores, Upstash Redis)
 tools/build_flags.py   regenerates flags/ from the flag-icons SVG set
 tools/build_preview.js bundles everything into one preview.html (no server needed)
 tools/countries.py     which countries are included + display-name overrides
+tools/test_streak.mjs  unit tests for js/streak.js (npm run test:streak)
 ```
 
 ## Running it locally
@@ -75,7 +79,8 @@ The GA4 snippet is in the `<head>` of `index.html` with Measurement ID `G-SR1N5C
 new data stream or property in GA and swap the ID in the two places it appears.
 
 Custom events sent: `start_daily`, `start_quick`, `round_complete`, `daily_complete`,
-`quick_complete`, `share`.
+`quick_complete`, `share`, and `streak` (`mode` = `daily` or `quick`, `days` = the streak length
+just reached; sent once when a day is first counted, not when a saved result is reopened).
 
 ## How scoring works
 
@@ -88,6 +93,25 @@ Custom events sent: `start_daily`, `start_quick`, `round_complete`, `daily_compl
   different colour). The three constants live at the bottom of `js/color.js`
   (`SCORE_FALLOFF`, `SCORE_ZERO_AT`, `PERFECT_BELOW`) if you want it harsher or kinder.
 * Reference colours come straight from the flag-icons SVGs.
+
+## Streaks
+
+A day counts towards a streak once you've played it: the Daily Challenge, or a finished Quick
+Play game (all five flags). Each mode has its own streak. It shows as a pill on the mode's
+home-screen card and as a card under the score on the result screen ("Played 5 days in a row,
+averaging 874/1000" - the average is the mean score per flag across the streak). The daily share
+text carries a streak line too. A streak survives until a whole day passes with no play, so
+having played yesterday but not yet today shows "play today to keep it".
+
+* Days are **UTC**, the same clock as the daily reset.
+* Everything lives **in the browser**: nothing is sent to the server and `api/daily.js` / Redis
+  are untouched. So a streak is per device and browser, and clearing site data resets it.
+* The **daily streak is read from the saved daily results** (`tc:daily:<date>`), so players who
+  were already playing kept their streak when this shipped. **Quick Play** keeps its own small
+  per-day log in `tc:qdays` (`{"2026-10-12": {"n": flags played, "sum": points}}`).
+* The maths is in `js/streak.js` and is covered by `npm run test:streak`. The home pills, result
+  cards and share line are in the "streaks" section of `js/game.js`; the milestone badges
+  (3, 7, 14, 30, 50, 100 and 365 days) are the `MILESTONES` table there.
 
 ## The flags and the pre-fill rule
 

@@ -8,6 +8,7 @@
     "dev": "npx serve .",
     "build:flags": "python3 tools/build_flags.py",
     "build:preview": "node tools/build_preview.js",
+    "test:streak": "node tools/test_streak.mjs",
     "playtest:live": "node tools/playtest_live.mjs"
   },
   "dependencies": {

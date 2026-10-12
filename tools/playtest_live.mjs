@@ -163,6 +163,17 @@ async function main() {
       } else {
         note(`submitted score: ${scorePoints}/1000`);
       }
+      // Streak card (js/streak.js). This browser starts with empty storage, so its first daily must start a
+      // new streak. The card fades in about a second after the score finishes counting, so wait for it to show.
+      try {
+        await page.waitForFunction(() => { const el = document.getElementById('result-streak'); return el && !el.hidden && getComputedStyle(el).opacity === '1'; }, { timeout: 5000 });
+        const streakText = (await page.locator('#result-streak').innerText()).replace(/\s+/g, ' ').trim();
+        if (/Streak started: day/i.test(streakText)) note('streak card shows a new streak');
+        else fail(`streak card has unexpected text after a first daily: "${streakText}"`);
+      } catch (e) {
+        fail('streak card never became visible on the daily result screen');
+      }
+      await page.waitForTimeout(700); // let the streak reveal animation finish so the screenshot shows the finished card
       await page.screenshot({ path: path.join(OUTDIR, 'daily-result.png') });
     }
   } catch (e) {
