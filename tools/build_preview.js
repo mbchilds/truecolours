@@ -16,7 +16,7 @@ for (const f of manifest.flags) {
 let html = read('index.html');
 html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + read('style.css') + '\n</style>');
 html = html.replace(/<!-- Google Analytics[\s\S]*?<\/script>\s*<script>[\s\S]*?<\/script>/, '<!-- analytics disabled in preview build -->');
-const scripts = ['js/color.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
+const scripts = ['js/color.js', 'js/streak.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
 html = html.replace(/<script src="js\/color.js"><\/script>[\s\S]*?<script src="js\/game.js"><\/script>/,
   `<script>window.EMBEDDED_FLAGS=${JSON.stringify(embedded)};</script>\n` + scripts);
 if (artifact) {

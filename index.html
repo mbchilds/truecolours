@@ -27,6 +27,22 @@
 </head>
 <body>
 
+  <!-- Shared icons, used as <svg class="flame"><use href="#i-flame"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="flame-grad" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#ff4f8b"/><stop offset=".5" stop-color="#ff6b57"/><stop offset="1" stop-color="#ffb94d"/>
+      </linearGradient>
+      <linearGradient id="flame-core" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#fff3c4"/>
+      </linearGradient>
+    </defs>
+    <symbol id="i-flame" viewBox="0 0 24 24">
+      <path fill="url(#flame-grad)" d="M12.6 1.6c.5 3.1 2.2 4.6 3.9 6.6 1.6 1.8 2.6 3.7 2.6 6.1 0 4.2-3 7.7-7.1 7.7S4.9 18.5 4.9 14.7c0-2.5 1.1-4.4 2.5-5.9.2 1.5.9 2.6 2 3.2-.6-3.6.2-7.9 3.2-10.4z"/>
+      <path fill="url(#flame-core)" d="M12 22.4c-2.3 0-4-1.7-4-3.9 0-1.7 1-2.8 2-4 .5-.6.9-1.3 1-2.2 1.3 1 2.2 1.9 3 3.1.7 1 1 2 1 3.1 0 2.2-1.6 3.9-3 3.9z"/>
+    </symbol>
+  </svg>
+
   <!-- ================= HOME ================= -->
   <section id="screen-home" class="screen active">
     <div class="globe-layer" aria-hidden="true">
@@ -64,11 +80,13 @@
           <span class="mode-kicker" id="daily-kicker">Daily Challenge</span>
           <span class="mode-title" id="daily-title">Today's flag</span>
           <span class="mode-desc" id="daily-desc">One flag, one attempt, same for everyone. See how you rank and share your score.</span>
+          <span class="streak-pill" id="daily-streak" hidden></span>
         </button>
         <button class="mode-card quick" id="btn-quick">
           <span class="mode-kicker">Quick Play</span>
           <span class="mode-title">5 random flags</span>
           <span class="mode-desc">Five rounds, five countries, no repeats. Score up to 5,000 points.</span>
+          <span class="streak-pill" id="quick-streak" hidden></span>
         </button>
       </div>
       <button class="link-btn" id="btn-how">How does scoring work?</button>
@@ -131,6 +149,7 @@
         <div class="big-score"><span id="result-points">0</span><span class="of">/1000</span></div>
         <div class="verdict" id="result-verdict">Spot on</div>
       </div>
+      <div class="streak-card" id="result-streak" hidden></div>
       <div class="compare">
         <figure><canvas id="result-yours"></canvas><figcaption>Your flag</figcaption></figure>
         <figure><canvas id="result-actual"></canvas><figcaption>The real flag</figcaption></figure>
@@ -152,6 +171,7 @@
         <div class="big-score"><span id="final-points">0</span><span class="of">/5000</span></div>
         <div class="verdict" id="final-verdict"></div>
       </div>
+      <div class="streak-card" id="final-streak" hidden></div>
       <div class="rounds-list" id="rounds-list"></div>
       <div class="result-actions">
         <button class="btn primary" id="btn-again">Play again</button>
@@ -169,12 +189,14 @@
       <p>Each colour in the real flag is worth an equal share of <b>1,000 points</b>. Your colour is compared with the real one using CIEDE2000, a measure of how different two colours <em>look</em> to a human eye — not just how far apart the numbers are. A difference you couldn't spot still scores 1,000; the further off you are, the faster the points fall away.</p>
       <p>Very small details (fine emblems, tiny stars, lettering) are pre-filled for you so you can focus on the big blocks of colour.</p>
       <p><b>Daily Challenge</b>: everyone in the world gets the same flag each day (resets at midnight UTC). One attempt only, so make it count — then share your score.</p>
+      <p><b>Streaks</b>: play the Daily Challenge on consecutive days to build a daily streak, and finish a Quick Play game on consecutive days to build a Quick Play streak. Days run on UTC, the same clock as the daily reset. Streaks are kept on this device.</p>
     </div>
   </div>
 
   <div class="toast" id="toast" hidden></div>
 
   <script src="js/color.js"></script>
+  <script src="js/streak.js"></script>
   <script src="js/picker.js"></script>
   <script src="js/flagboard.js"></script>
   <script src="js/game.js"></script>

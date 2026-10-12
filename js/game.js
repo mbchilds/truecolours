@@ -1,6 +1,6 @@
 /* game.js - screens, game modes, scoring, daily challenge and sharing. */
 (function () {
-  const C = window.Color, Assets = window.FlagAssets;
+  const C = window.Color, S = window.Streak, Assets = window.FlagAssets;
 
   // ----------------------------------------------------------------- config
   const CONFIG = {
@@ -139,12 +139,12 @@
     $('btn-how-close').addEventListener('click', () => $('modal-how').hidden = true);
     $('modal-how').addEventListener('click', e => { if (e.target.id === 'modal-how') e.target.hidden = true; });
 
-    refreshDailyCard();
+    refreshDailyCard(); refreshStreaks();
     if (new URLSearchParams(location.search).has('daily')) startDaily();
   }
 
   function goHome() {
-    state.mode = null; refreshDailyCard(); show('screen-home');
+    state.mode = null; refreshDailyCard(); refreshStreaks(); show('screen-home');
     history.replaceState(null, '', location.pathname);
   }
 
@@ -177,6 +177,63 @@
     }
   }
 
+  // ----------------------------------------------------------------- streaks
+  // A day counts once you've played it: the Daily Challenge, or a finished Quick Play game. Days are UTC, like the
+  // daily reset. Daily streaks are read straight from the saved daily results, so players who were already playing
+  // keep theirs; Quick Play keeps a small per-day log of its own. Both live in this browser only.
+  const MILESTONES = { 3: 'Hat-trick', 7: 'One week', 14: 'Two weeks', 30: 'One month', 50: '50 days', 100: 'Century', 365: 'One year' };
+  const FLAME = '<svg class="flame" aria-hidden="true"><use href="#i-flame"/></svg>';
+  const quickLog = () => store.get('qdays', {});
+  function dailyLog(today, points) {
+    const log = points == null ? {} : { [today]: { n: 1, sum: points } };   // today's score is kept in memory in case storage is blocked
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const m = /^tc:daily:(\d{4}-\d{2}-\d{2})$/.exec(localStorage.key(i));
+        const rec = m && store.get('daily:' + m[1]);
+        if (rec && Number.isFinite(rec.points)) log[m[1]] = { n: 1, sum: rec.points };
+      }
+    } catch (e) { /* storage unavailable */ }
+    return log;
+  }
+
+  // Home screen: a pill on each mode card, e.g. "3-day streak · play today to keep it".
+  function refreshStreaks() {
+    const today = utcDateKey();
+    streakPill($('daily-streak'), S.compute(dailyLog(today), today), 'play today to keep it', 'Play today to start a streak');
+    streakPill($('quick-streak'), S.compute(quickLog(), today), 'finish a game today to keep it', 'Finish a game to start a streak');
+  }
+  function streakPill(el, s, keep, start) {
+    el.className = 'streak-pill' + (s.current ? ' on' : '') + (s.atRisk ? ' risk' : '');
+    el.innerHTML = FLAME + (s.current ? `${s.current}-day streak · ${s.atRisk ? keep : 'done today'}` : start);
+    el.hidden = false;
+  }
+
+  // Results: "Played 5 days in a row · averaging 874/1000". `fresh` means it was just earned, so the number counts up from the old one.
+  function streakCard(el, kind, s, fresh) {
+    const rolls = fresh && s.current > 1;   // a brand-new streak has no earlier number to roll up from; the flame just lights
+    const num = `<span class="sc-num"><span class="sc-roll${rolls ? ' rolls' : ''}">${rolls ? `<i aria-hidden="true">${s.current - 1}</i>` : ''}<i>${s.current}</i></span></span>`;
+    const best = s.best > s.current ? ` · Best ${s.best}` : '';
+    const sub = s.current > 1 ? `Averaging <b>${s.avg}</b>/1000${kind === 'quick' ? ' per flag' : ''}${best}` : `Come back tomorrow to make it 2${best}`;
+    el.className = `streak-card ${kind}${fresh ? ' fresh' : ''}`;
+    el.innerHTML = `
+      <div class="sc-flame">${FLAME}</div>
+      <div>
+        <div class="sc-kicker">${kind === 'daily' ? 'Daily' : 'Quick Play'} streak${MILESTONES[s.current] ? `<span class="sc-badge">${MILESTONES[s.current]}</span>` : ''}</div>
+        <div class="sc-head">${s.current > 1 ? `Played ${num} days in a row` : `Streak started: day ${num}`}</div>
+        <div class="sc-sub">${sub}</div>
+      </div>
+      <div class="sc-week" aria-hidden="true">${s.week.map((d, i) => `<i class="${d.played ? 'on' : ''}${i === 6 ? ' today' : ''}">${d.initial}</i>`).join('')}</div>`;
+    el.hidden = false;
+  }
+
+  // A finished Quick Play game counts for the day. Credited as soon as the fifth flag is submitted, not when the final screen opens.
+  function finishQuick() {
+    const today = utcDateKey(), before = quickLog() || {}, log = S.record(before, today, state.results.length, state.total);
+    store.set('qdays', log);
+    state.streak = Object.assign(S.compute(log, today), { fresh: !before[today] });   // only a day's first game moves the streak
+    if (state.streak.fresh) track('streak', { mode: 'quick', days: state.streak.current });
+  }
+
   // ----------------------------------------------------------------- modes
   function startDaily() {
     const d = todaysDaily(), played = store.get('daily:' + d.key);
@@ -193,7 +250,7 @@
     const pool = manifest.flags.filter(f => !excluded.has(f.code));
     const picks = [];
     while (picks.length < CONFIG.rounds && pool.length) picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    state.mode = 'quick'; state.round = 0; state.flags = picks; state.results = []; state.total = 0;
+    state.mode = 'quick'; state.round = 0; state.flags = picks; state.results = []; state.total = 0; state.streak = null;
     track('start_quick');
     beginRound();
   }
@@ -233,18 +290,20 @@
     if (state.mode === 'daily') {
       const saved = { points: result.points, fills: [...fills], stats: null };
       store.set('daily:' + state.daily.key, saved);
-      showResult(meta, fills, result, null, true);
+      showResult(meta, fills, result, null, true, true);
       submitDailyScore(result.points).then(stats => {
         if (stats) { saved.stats = stats; store.set('daily:' + state.daily.key, saved); renderDailyStats(stats, result.points); }
         else renderDailyStats(null, result.points);
       });
     } else {
+      if (state.round + 1 >= CONFIG.rounds) finishQuick();
       showResult(meta, fills, result, null, false);
     }
   }
 
   // ----------------------------------------------------------------- results
-  async function showResult(meta, fills, result, stats, isDaily) {
+  // `fresh` = this attempt was just submitted (as opposed to reopening today's saved result), which is when the streak animates.
+  async function showResult(meta, fills, result, stats, isDaily, fresh) {
     show('screen-result');
     $('result-kicker').textContent = isDaily ? `Daily Challenge #${state.daily.number}` : `Round ${state.round + 1} of ${CONFIG.rounds}`;
     $('result-country').textContent = meta.name.toUpperCase();
@@ -271,12 +330,16 @@
     const actions = $('result-actions');
     const ds = $('daily-stats');
     if (isDaily) {
+      const streak = S.compute(dailyLog(state.daily.key, result.points), state.daily.key);
+      streakCard($('result-streak'), 'daily', streak, fresh);
+      if (fresh) track('streak', { mode: 'daily', days: streak.current });
       ds.hidden = false;
       if (stats) renderDailyStats(stats, result.points); else ds.innerHTML = '<div class="ds-loading">Comparing with other players…</div>';
       actions.innerHTML = `<button class="btn primary" id="btn-share">Share result</button><button class="btn ghost" id="btn-res-home">Menu</button>`;
       $('btn-share').addEventListener('click', () => share(meta, result));
       $('btn-res-home').addEventListener('click', goHome);
     } else {
+      $('result-streak').hidden = true;
       ds.hidden = true;
       const last = state.round + 1 >= CONFIG.rounds;
       actions.innerHTML = `<button class="btn primary" id="btn-next">${last ? 'See final score' : 'Next flag'}</button>`;
@@ -300,6 +363,7 @@
     const max = CONFIG.rounds * 1000;
     animateNumber($('final-points'), state.total);
     $('final-verdict').textContent = `${overallVerdict(state.total, max)} · ${Math.round(state.total / max * 100)}% accuracy`;
+    if (state.streak) streakCard($('final-streak'), 'quick', state.streak, state.streak.fresh); else $('final-streak').hidden = true;
     $('rounds-list').innerHTML = state.results.map((r, i) => `
       <div class="rl-row"><span class="rl-n">${i + 1}</span><span class="rl-name">${r.meta.name}</span><span class="rl-bar"><i style="width:${r.result.points / 10}%"></i></span><span class="rl-pts">${r.result.points}</span></div>`).join('');
     track('quick_complete', { score: state.total });
@@ -330,7 +394,9 @@
   // ----------------------------------------------------------------- share
   async function share(meta, result) {
     const url = location.origin + location.pathname + '?daily';
-    const text = `${CONFIG.siteName} · Daily #${state.daily.number} · ${meta.name}\nMy accuracy: ${result.points}/1000 ${emojiBar(result.groups)}\nThink you can do better? ${url}`;
+    const s = S.compute(dailyLog(state.daily.key, result.points), state.daily.key);
+    const streak = s.current > 1 ? `🔥 Streak: ${s.current} days in a row · avg ${s.avg}/1000` : '🔥 Streak: day 1';
+    const text = `${CONFIG.siteName} · Daily #${state.daily.number} · ${meta.name}\nMy accuracy: ${result.points}/1000 ${emojiBar(result.groups)}\n${streak}\nThink you can do better? ${url}`;
     track('share', { daily_number: state.daily.number });
     if (navigator.share) {
       try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
