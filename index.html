@@ -41,6 +41,11 @@
       <path fill="url(#flame-grad)" d="M12.6 1.6c.5 3.1 2.2 4.6 3.9 6.6 1.6 1.8 2.6 3.7 2.6 6.1 0 4.2-3 7.7-7.1 7.7S4.9 18.5 4.9 14.7c0-2.5 1.1-4.4 2.5-5.9.2 1.5.9 2.6 2 3.2-.6-3.6.2-7.9 3.2-10.4z"/>
       <path fill="url(#flame-core)" d="M12 22.4c-2.3 0-4-1.7-4-3.9 0-1.7 1-2.8 2-4 .5-.6.9-1.3 1-2.2 1.3 1 2.2 1.9 3 3.1.7 1 1 2 1 3.1 0 2.2-1.6 3.9-3 3.9z"/>
     </symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="8.5" cy="14.8" r="1.25" fill="currentColor"/><circle cx="12" cy="14.8" r="1.25" fill="currentColor"/><circle cx="15.5" cy="14.8" r="1.25" fill="currentColor"/>
+    </symbol>
   </svg>
 
   <!-- ================= HOME ================= -->
@@ -89,7 +94,9 @@
           <span class="streak-pill" id="quick-streak" hidden></span>
         </button>
       </div>
+      <button class="link-btn" id="btn-archive" data-nav="calendar" hidden>Past dailies</button>
       <button class="link-btn" id="btn-how">How does scoring work?</button>
+      <p class="nopost-note" id="nopost-note" hidden>Leaderboard off in this tab: scores you finish here aren't sent to it.</p>
       <p class="credits">Flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a> (MIT). Globe from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public domain). Colours judged with CIEDE2000.</p>
     </div>
   </section>
@@ -101,7 +108,11 @@
         <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
       </button>
       <div class="round-label" id="round-label">Round 1 of 5</div>
+      <div class="day-nav" id="play-daynav" hidden></div>
       <div class="score-chip" id="score-chip"><span class="score-chip-label">Total</span><span id="score-total">0</span></div>
+      <button class="icon-btn" id="btn-play-cal" data-nav="calendar" aria-label="All days" hidden>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><use href="#i-calendar"/></svg>
+      </button>
     </header>
 
     <div class="play-grid">
@@ -114,6 +125,10 @@
         <p class="prefill-note" id="prefill-note" hidden>
           <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>
           Some fine details of this flag have been filled in for you.
+        </p>
+        <p class="archive-note" id="archive-note" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><use href="#i-calendar"/></svg>
+          Catch-up play: counts towards your all-time average, not your streak or the leaderboard.
         </p>
         <div class="progress-row">
           <div class="progress-text" id="progress-text">0 of 3 regions filled</div>
@@ -140,6 +155,15 @@
 
   <!-- ================= ROUND RESULT ================= -->
   <section id="screen-result" class="screen">
+    <header class="topbar" id="result-topbar" hidden>
+      <button class="icon-btn" id="btn-result-back" aria-label="Back to menu">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+      </button>
+      <div class="day-nav" id="result-daynav"></div>
+      <button class="icon-btn" data-nav="calendar" aria-label="All days">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><use href="#i-calendar"/></svg>
+      </button>
+    </header>
     <div class="result-wrap">
       <div class="result-head">
         <span class="kicker" id="result-kicker">Round 1 of 5</span>
@@ -159,6 +183,25 @@
       <div id="daily-stats" class="daily-stats" hidden></div>
 
       <div class="result-actions" id="result-actions"></div>
+    </div>
+  </section>
+
+  <!-- ================= PAST DAILIES ================= -->
+  <section id="screen-archive" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-archive-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+      </button>
+      <div class="round-label">Past dailies</div>
+      <span class="topbar-gap" aria-hidden="true"></span>
+    </header>
+    <div class="archive-wrap">
+      <div class="daily-stats" id="archive-summary"></div>
+      <div id="archive-grid"></div>
+      <div class="cal-legend" aria-hidden="true">
+        <span><i class="cal-key on"></i>On the day</span><span><i class="cal-key late"></i>Caught up late</span><span><i class="cal-key none"></i>Not played</span>
+      </div>
+      <p class="archive-hint">Each day can be played once. Catch-ups count towards your all-time average, not your streak or the leaderboard.</p>
     </div>
   </section>
 
@@ -190,6 +233,7 @@
       <p>Very small details (fine emblems, tiny stars, lettering) are pre-filled for you so you can focus on the big blocks of colour.</p>
       <p><b>Daily Challenge</b>: everyone in the world gets the same flag each day (resets at midnight UTC). One attempt only, so make it count — then share your score.</p>
       <p><b>Streaks</b>: play the Daily Challenge on consecutive days to build a daily streak, and finish a Quick Play game on consecutive days to build a Quick Play streak. Days run on UTC, the same clock as the daily reset. Streaks are kept on this device.</p>
+      <p><b>Past dailies</b>: once you've played today's, tap any day in your streak card (or open <b>All days</b>) to play one you missed or look back at one you've done. Each day can only be played once. Catch-ups count towards your all-time average, but not your streak or the leaderboard.</p>
     </div>
   </div>
 

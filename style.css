@@ -11,6 +11,7 @@
   --coral-2: #ff8a6b;
   --teal: #2ee6c5;
   --gold: #ffd166;
+  --late: #d4943a;      /* a day caught up later: the gold of a day played on time, one shade deeper */
   --ink: #18181c;
   --radius: 18px;
   --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
@@ -107,7 +108,9 @@ h1 { font-size: clamp(48px, 9vw, 92px); line-height: .9; margin: 0; letter-spaci
 .flag-loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--panel); }
 .spinner { width: 34px; height: 34px; border: 4px solid var(--line); border-top-color: var(--coral); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.prefill-note { display: flex; align-items: center; gap: 8px; justify-content: center; color: var(--gold); font-size: 13px; margin: 12px 0 0; }
+.prefill-note, .archive-note { display: flex; align-items: center; gap: 8px; justify-content: center; color: var(--gold); font-size: 13px; margin: 12px 0 0; line-height: 1.4; }
+.archive-note { padding: 9px 12px; border: 1px solid rgba(255, 209, 102, .28); border-radius: 12px; background: rgba(255, 209, 102, .07); justify-content: flex-start; text-align: left; }
+.archive-note svg { flex: none; }
 .progress-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
 .progress-text { color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .progress-bar { flex: 1; height: 8px; background: var(--panel); border-radius: 999px; overflow: hidden; }
@@ -209,20 +212,36 @@ h1 { font-size: clamp(48px, 9vw, 92px); line-height: .9; margin: 0; letter-spaci
 .sc-sub { margin-top: 2px; color: var(--muted); font-size: 14px; }
 .sc-sub b { color: var(--text); }
 .sc-week { display: flex; gap: 6px; }
-.sc-week i { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; font: 700 10px var(--body); color: var(--muted); background: rgba(255, 255, 255, .05); }
-.sc-week i.on { color: #1b1304; background: var(--accent); }
-.sc-week i.today { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px rgba(var(--accent-rgb), .55); }
+.sc-day { width: 26px; height: 26px; padding: 0; border: 0; display: grid; place-items: center; border-radius: 50%; font: 700 10px var(--body); color: var(--muted); background: rgba(255, 255, 255, .05); }
+button.sc-day { position: relative; cursor: pointer; transition: transform .12s ease; }
+button.sc-day::after { content: ""; position: absolute; inset: -8px -3px; }
+button.sc-day:hover { transform: scale(1.14); }
+button.sc-day:focus-visible, .cal-day:focus-visible, .dn-btn:focus-visible, .sc-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.sc-day.on { color: #1b1304; background: var(--accent); }
+.sc-day.late { color: #1b1304; background: var(--late); }
+.sc-day.off { opacity: .35; }
+.sc-day.today { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px rgba(var(--accent-rgb), .55); }
+.sc-day.view { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px rgba(255, 255, 255, .85); }
+.sc-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.sc-link { margin-left: auto; background: none; border: 0; padding: 4px 2px; color: var(--accent); font: 700 13px var(--body); cursor: pointer; white-space: nowrap; }
+.sc-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* the card for a past day: a calendar tile instead of the flame, and what a catch-up moves (the all-time average) */
+.archive .sc-flame { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; background: rgba(var(--accent-rgb), .12); font-size: 30px; filter: none; }
+.cal-ico { width: 1em; height: 1em; color: var(--accent); }
+.sc-delta { margin-left: 4px; font-size: 12px; font-weight: 700; }
+.sc-delta.up { color: var(--teal); }
+.sc-delta.down { color: var(--muted); }
 /* just played: the card waits for the score to finish counting, then the flame ignites and the number rolls up */
 .streak-card.fresh { animation: sc-in .6s cubic-bezier(.2, 1, .3, 1) 1s both; }
 .fresh .sc-flame .flame { animation: ignite .9s cubic-bezier(.2, 1.4, .4, 1) 1.15s both; }
 .fresh .sc-roll.rolls { animation: sc-roll .6s cubic-bezier(.3, 1.5, .5, 1) 1.6s both; }
-.fresh .sc-week i.today { animation: dot-pop .5s cubic-bezier(.2, 1.7, .4, 1) 1.7s both; }
+.fresh .sc-day.today { animation: dot-pop .5s cubic-bezier(.2, 1.7, .4, 1) 1.7s both; }
 @keyframes sc-in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
 @keyframes ignite { 0% { transform: scale(.35); filter: brightness(2.4) saturate(0); } 55% { transform: scale(1.2); } 100% { transform: scale(1); } }
 @keyframes sc-roll { from { transform: none; } to { transform: translateY(-50%); } }
 @keyframes dot-pop { from { transform: scale(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .streak-card.fresh, .fresh .sc-flame .flame, .fresh .sc-roll.rolls, .fresh .sc-week i.today, .streak-pill.risk .flame { animation: none; }
+  .streak-card.fresh, .fresh .sc-flame .flame, .fresh .sc-roll.rolls, .fresh .sc-day.today, .streak-pill.risk .flame { animation: none; }
   .sc-roll i:first-child:not(:last-child) { display: none; }
 }
 @media (max-width: 640px) {
@@ -231,8 +250,50 @@ h1 { font-size: clamp(48px, 9vw, 92px); line-height: .9; margin: 0; letter-spaci
   .sc-kicker { letter-spacing: .12em; }
   .sc-badge { letter-spacing: .06em; }
   .sc-week { grid-column: 1 / -1; justify-content: space-between; }
-  .sc-week i { width: 30px; height: 30px; }
+  .sc-day { width: 30px; height: 30px; }
+  .sc-foot { flex-wrap: wrap; }
 }
+
+/* ---------------------------------------------------------------- past days */
+.day-nav { display: inline-flex; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.dn-btn { width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.dn-btn:hover { background: var(--panel-2); }
+.dn-btn[data-off] { visibility: hidden; }
+.dn-label { padding: 0 8px; font: 700 13px var(--body); letter-spacing: .06em; white-space: nowrap; }
+.topbar-gap { width: 42px; height: 42px; }
+#result-topbar:not([hidden]) + .result-wrap { padding-top: 12px; }
+#screen-result.stale .breakdown, #screen-result.noflag .compare, #screen-result.stale .compare figure:first-child { display: none; }
+#screen-result.stale .compare { grid-template-columns: 1fr; max-width: 420px; order: 2; }
+#screen-result.stale #daily-stats { order: 1; margin: -8px 0 20px; }       /* say why before showing the flag */
+#screen-result.stale .result-actions { order: 3; }
+.stale-sw { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.stale-sw i { width: 24px; height: 24px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, .22); }
+.archive-wrap { max-width: 640px; margin: 0 auto; padding: 8px 20px 60px; }
+.archive-wrap .daily-stats { margin: 6px 0 24px; }
+@media (max-width: 860px) {
+  .archive-wrap .daily-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .archive-wrap .ds-item { padding: 12px 6px; }
+  .archive-wrap .ds-num { font-size: 24px; }
+}
+.ds-num small { font-size: .5em; color: var(--muted); font-weight: 700; }
+.cal-month { margin-bottom: 26px; }
+.cal-month h3 { margin: 0 0 10px; font: 800 18px var(--display); }
+.cal-dow, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-dow i { padding-bottom: 4px; text-align: center; font: 700 10px var(--body); letter-spacing: .1em; color: var(--muted); }
+.cal-day { aspect-ratio: 1; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .03); color: var(--muted); font: 700 15px var(--body); cursor: pointer; transition: transform .12s ease, border-color .12s; }
+.cal-day small { font: 700 10px var(--body); opacity: .75; }
+.cal-day:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, .3); }
+.cal-day.on { background: var(--gold); border-color: transparent; color: #1b1304; }
+.cal-day.late { background: var(--late); border-color: transparent; color: #1b1304; }
+.cal-day.today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(255, 209, 102, .6); }
+.cal-day.view { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(255, 255, 255, .85); }
+.cal-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.cal-key { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--line); border-radius: 4px; }
+.cal-key.on { background: var(--gold); border-color: transparent; }
+.cal-key.late { background: var(--late); border-color: transparent; }
+.cal-key.none { background: rgba(255, 255, 255, .03); }
+.archive-hint { margin: 14px 0 0; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.nopost-note { margin: 18px 0 0; padding: 6px 14px; border: 1px dashed rgba(255, 209, 102, .5); border-radius: 999px; color: var(--gold); font-size: 12.5px; }
 
 /* ---------------------------------------------------------------- modal/toast */
 .modal { position: fixed; inset: 0; background: rgba(5, 10, 20, .7); display: grid; place-items: center; padding: 20px; z-index: 50; backdrop-filter: blur(4px); }

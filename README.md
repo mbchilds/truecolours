@@ -11,6 +11,8 @@ how close each of your colours is to the real thing.
 * **Quick Play** - five random flags, no repeats, up to 5,000 points.
 * **Streaks** - play the Daily Challenge (or finish a Quick Play game) on consecutive days to
   build a streak. See "Streaks" below.
+* **Past dailies** - once today's daily is done, play or look back at any earlier day. See
+  "Past dailies" below.
 
 Everything is plain HTML/CSS/JS - no build step, no framework. It runs on Vercel with
 one serverless function for the daily-challenge stats.
@@ -21,7 +23,7 @@ one serverless function for the daily-challenge stats.
 index.html          the whole UI (all screens are sections toggled by game.js)
 style.css           theme + layout
 js/color.js         colour maths: HSV/RGB/Lab conversions, CIEDE2000, points curve
-js/streak.js        consecutive-day streak maths (pure functions, no DOM or storage)
+js/streak.js        consecutive-day streak maths and the past-days calendar (pure functions, no DOM or storage)
 js/picker.js        the colour picker component
 js/flagboard.js     loads a flag's region map and draws / fills the canvas
 js/game.js          screens, modes, scoring, daily challenge, share, analytics events
@@ -79,8 +81,18 @@ The GA4 snippet is in the `<head>` of `index.html` with Measurement ID `G-SR1N5C
 new data stream or property in GA and swap the ID in the two places it appears.
 
 Custom events sent: `start_daily`, `start_quick`, `round_complete`, `daily_complete`,
-`quick_complete`, `share`, and `streak` (`mode` = `daily` or `quick`, `days` = the streak length
-just reached; sent once when a day is first counted, not when a saved result is reopened).
+`quick_complete`, `share`, `streak` (`mode` = `daily` or `quick`, `days` = the streak length
+just reached; sent once when a day is first counted, not when a saved result is reopened), and
+`start_archive` / `archive_complete` for catch-up plays of past days (those never send
+`daily_complete` or `streak`).
+
+### Previews and the live leaderboard
+
+Preview deployments (any branch other than `main`) use the same Upstash database as production
+(the `KV_` variables are set for Production, Preview and Development), so a score submitted on a
+preview lands in the real leaderboard. To try a preview without that, open it with `?nopost` (or
+`#nopost`) on the end of the URL: that tab then never submits scores, says so on the home screen,
+and stays that way until the tab is closed.
 
 ## How scoring works
 
@@ -112,6 +124,31 @@ having played yesterday but not yet today shows "play today to keep it".
 * The maths is in `js/streak.js` and is covered by `npm run test:streak`. The home pills, result
   cards and share line are in the "streaks" section of `js/game.js`; the milestone badges
   (3, 7, 14, 30, 50, 100 and 365 days) are the `MILESTONES` table there.
+* Days played late as a catch-up (see "Past dailies") never count towards a streak.
+
+## Past dailies
+
+Once today's Daily Challenge is done, every earlier day back to Daily #1 opens up. Tap a day in the
+streak card's week strip, step with the ‹ › arrows at the top of any daily screen, or open **All
+days** (also linked from the home screen) for a calendar of every day so far. Each day can be
+played once: a day you haven't played starts a **catch-up**, and a day you have played always
+shows its saved result (coloured flag and breakdown), never a second attempt.
+
+* **Unlock rule**: past days are available once today's daily has a saved result. If the clock
+  rolls over to a new day they lock again until that day is played.
+* **Catch-ups don't count towards a streak** (they can't extend, repair or join one) and are
+  **never sent to the leaderboard**. `api/daily.js` only takes today and yesterday anyway, and is
+  unchanged. They do count towards the all-time numbers: dailies played and the all-time average
+  (the streak card's own average stays on-time days only). The week strip, calendar and result card
+  show them in a deeper shade of gold than a day played on the day.
+* Saved results (`tc:daily:<date>`) now also record `code` (the flag) and `v` (its version in the
+  manifest), plus `late: true` for a catch-up. Results saved before that carry neither, so the flag
+  is found by re-scoring the saved colouring against the likely candidates (the flag for that date
+  today, and the one the shuffle originally gave before flags could be taken out of play) and
+  keeping the one that reproduces the saved score. If none does (the flag has been redrawn since),
+  the day shows its score without the colouring.
+* The calendar layout is `calendar()` in `js/streak.js` (covered by `npm run test:streak`); the
+  screens are in the "past days" section of `js/game.js`.
 
 ## The flags and the pre-fill rule
 

@@ -107,13 +107,19 @@
       this.bind();
     }
 
+    // Returns false if a newer load was started while this one was fetching (the player moved on to another flag), in
+    // which case this one is dropped: otherwise a slow download could land last and leave the wrong region map on the board.
     async load(meta) {
+      const id = this.loadId = (this.loadId || 0) + 1;
       this.meta = meta;
-      this.flag = await Assets.loadFlag(meta.code);
+      const flag = await Assets.loadFlag(meta.code);
+      if (id !== this.loadId) return false;
+      this.flag = flag;
       this.canvas.width = this.flag.w; this.canvas.height = this.flag.h;
       this.imgData = this.ctx.createImageData(this.flag.w, this.flag.h);
       this.fills = new Map(); this.hover = 0;
       this.render();
+      return true;
     }
 
     regionAt(clientX, clientY) {
