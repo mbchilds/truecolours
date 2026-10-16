@@ -25,11 +25,15 @@ style.css           theme + layout
 js/color.js         colour maths: HSV/RGB/Lab conversions, CIEDE2000, points curve
 js/streak.js        consecutive-day streak maths and the past-days calendar (pure functions, no DOM or storage)
 js/picker.js        the colour picker component
+js/privacy.js       the analytics choice (Google Analytics only loads after "accept"), cookie cleanup, "delete my data"
 js/flagboard.js     loads a flag's region map and draws / fills the canvas
 js/game.js          screens, modes, scoring, daily challenge, share, analytics events
 flagcheck.html      dev tool: play every flag in the catalogue one after another
 js/flagcheck.js     logic for flagcheck.html (see "Checking every flag" below)
 flags/              one .svg + one .bin (region map) per country, plus manifest.json
+fonts/              the two self-hosted fonts (variable woff2) and their licence texts
+privacy.html        privacy policy, incl. the cookie list (#cookies) and the player's controls (#your-choices)
+terms.html          terms of use, incl. credits and licences (#credits)
 api/daily.js        Vercel serverless function (daily scores, Upstash Redis)
 tools/build_flags.py   regenerates flags/ from the flag-icons SVG set
 tools/build_preview.js bundles everything into one preview.html (no server needed)
@@ -69,22 +73,32 @@ reached.
 ### What the API stores
 
 Per day, in Redis: a player count, a score sum, a histogram of scores in buckets of 50
-(for the "you beat X%" figure) and a set of anonymous client ids so a player is only
-counted once. Nothing personal is stored. The score itself is calculated in the browser,
-so a determined person could fake a score - fine for a friendly daily, but don't run a
-prize competition on it.
+(for the "you beat X%" figure) and a set of random client ids so a player is only counted
+once. No names, emails or other details are stored. The id set expires 3 days after the
+last new player is added (and ids are only accepted for today and yesterday), so an id is
+gone within 5 days; the three totals contain no ids and are kept. The score itself is
+calculated in the browser, so a determined person could fake a score - fine for a friendly
+daily, but don't run a prize competition on it.
 
 ## Google Analytics
 
-The GA4 snippet is in the `<head>` of `index.html` with Measurement ID `G-SR1N5CH6R0`
-(your existing property). If you'd rather keep this site's numbers separate, create a
-new data stream or property in GA and swap the ID in the two places it appears.
+Analytics is **opt-in**. Nothing is requested from Google until the visitor presses "Accept
+analytics" in the banner on the home screen (or on the privacy page); "Reject analytics" and not
+choosing both mean no analytics. `js/privacy.js` then loads the GA4 tag with Measurement ID
+`G-SR1N5CH6R0`, which lives in `<meta name="ga-measurement-id">` in the `<head>` of `index.html`
+(swap it there if you create a new data stream; take the tag out and there is no analytics and no
+banner, which is how `tools/build_preview.js` builds the single-file preview). It is configured
+with analytics storage only: no ad storage, Google signals or ad personalisation, and a 1-year
+cookie.
 
-Custom events sent: `start_daily`, `start_quick`, `round_complete`, `daily_complete`,
-`quick_complete`, `share`, `streak` (`mode` = `daily` or `quick`, `days` = the streak length
-just reached; sent once when a day is first counted, not when a saved result is reopened), and
-`start_archive` / `archive_complete` for catch-up plays of past days (those never send
-`daily_complete` or `streak`).
+In the GA admin (these can't be set from the code): set event data retention to 2 months, and
+consider switching off the Enhanced measurement options you don't use.
+
+Custom events sent (only when accepted): `start_daily`, `start_quick`, `round_complete`,
+`daily_complete`, `quick_complete`, `share`, `streak` (`mode` = `daily` or `quick`, `days` = the
+streak length just reached; sent once when a day is first counted, not when a saved result is
+reopened), and `start_archive` / `archive_complete` for catch-up plays of past days (those never
+send `daily_complete` or `streak`).
 
 ### Previews and the live leaderboard
 
@@ -93,6 +107,45 @@ Preview deployments (any branch other than `main`) use the same Upstash database
 preview lands in the real leaderboard. To try a preview without that, open it with `?nopost` (or
 `#nopost`) on the end of the URL: that tab then never submits scores, says so on the home screen,
 and stays that way until the tab is closed.
+
+## Privacy, cookies and the legal pages
+
+* **What is stored where.** The game saves your streaks, daily results and a random id in the
+  browser's localStorage (`tc:` keys). The only things that leave the device are the daily score,
+  date and random id (to the leaderboard, on the day itself) and, if accepted, Google Analytics.
+  The game sets no cookies of its own; the only cookies are Google's `_ga` and `_ga_<id>`.
+* **The choice.** Kept in `tc:consent` (`{ v, a, t }`: version, accepted, when). Bump `VERSION` in
+  `js/privacy.js` to ask everyone again. "Cookie settings" at the bottom of the home screen reopens
+  the banner, withdrawing deletes the Google cookies and stops sending, and the same controls are on
+  `privacy.html#your-choices`, together with **Delete my data**, which removes every `tc:` key
+  (except the dev tool's `tc:flagcheck`) and the Google cookies from that browser.
+* **Keep the policy true.** `privacy.html` lists every storage key, cookie, third party and
+  retention period. If you add a storage key, a third-party script, new analytics events or change
+  what the API receives or how long it keeps it, change that page (and its "last updated" date) in
+  the same commit. The operator and contact details are in `privacy.html` and `terms.html`.
+* **No third-party requests on load.** The fonts are self-hosted (`fonts/`, with their SIL Open Font
+  Licence texts); the flag artwork, map and everything else are served from the site. Google
+  Analytics is the only third-party script and only after consent.
+* **Licences.** flag-icons (MIT) and Natural Earth (public domain) are credited on the home screen
+  and in `terms.html#credits`, with their licence files shipped alongside the data
+  (`flags/LICENSE-flag-icons.txt`, `globe/LICENSE-naturalearth.txt`, `fonts/OFL-*.txt`). The icons
+  in `index.html` are drawn for FlagFill.
+
+## Accessibility
+
+* The game can be played with the keyboard alone. Tab to the flag board: the selected region gets a
+  dashed outline, the arrow keys (or Home / End) move between regions in reading order, Enter or
+  Space fills it with the current colour, and a screen-reader status line says which region it is
+  (position, size and what you filled it with, never the real colour). The picker's colour area and
+  hue bar are sliders with spoken values, and a hex code can be typed.
+* Each screen has one `h1` and focus moves to it when the screen changes. The how-it-works dialog
+  is a modal dialog (focus in, page behind it inert, Escape closes, focus returns). The result
+  pictures have text alternatives and the animated score is replaced by a plain-text summary for
+  screen readers. `prefers-reduced-motion` switches the animations and the score count-up off.
+* Text colours meet WCAG AA (4.5:1; 3:1 for large text) against the real backgrounds, including the
+  card glows and the globe. Primary buttons use dark text on the coral gradient for that reason; if
+  you change `--muted` or the glows, re-check. Quick check: run axe-core on each screen, and
+  measure text against the pixels behind it, since axe can't judge gradients.
 
 ## How scoring works
 
@@ -234,4 +287,5 @@ straight from disk or send it to someone. The API is not available in that build
 ## Credits
 
 Flag artwork from [flag-icons](https://github.com/lipis/flag-icons) (MIT, licence in
-`flags/LICENSE-flag-icons.txt`). Fonts: Bricolage Grotesque and Inter via Google Fonts.
+`flags/LICENSE-flag-icons.txt`). Fonts: Bricolage Grotesque and Inter, self-hosted from `fonts/`
+(SIL Open Font Licence 1.1, texts alongside). Map: Natural Earth (public domain).

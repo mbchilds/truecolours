@@ -14,9 +14,13 @@ for (const f of manifest.flags) {
   embedded.bin[f.code] = fs.readFileSync(path.join(root, 'flags', f.code + '.bin')).toString('base64');
 }
 let html = read('index.html');
-html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + read('style.css') + '\n</style>');
-html = html.replace(/<!-- Google Analytics[\s\S]*?<\/script>\s*<script>[\s\S]*?<\/script>/, '<!-- analytics disabled in preview build -->');
-const scripts = ['js/color.js', 'js/streak.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
+// the fonts are separate files in the site; inline them as data URIs so the single file still has them
+const css = read('style.css').replace(/url\("(fonts\/[^"]+)"\)/g, (_, f) => `url("data:font/woff2;base64,${fs.readFileSync(path.join(root, f)).toString('base64')}")`);
+html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + css + '\n</style>');
+html = html.replace(/<link rel="preload" href="fonts\/[^>]*>\n?/g, '');
+// no measurement ID = js/privacy.js starts no analytics and shows no banner
+html = html.replace(/<meta name="ga-measurement-id"[^>]*>/, '<!-- analytics disabled in preview build -->');
+const scripts = ['js/color.js', 'js/streak.js', 'js/privacy.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
 html = html.replace(/<script src="js\/color.js"><\/script>[\s\S]*?<script src="js\/game.js"><\/script>/,
   `<script>window.EMBEDDED_FLAGS=${JSON.stringify(embedded)};</script>\n` + scripts);
 if (artifact) {

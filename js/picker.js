@@ -9,22 +9,22 @@
       this.h = 0; this.s = 0.85; this.v = 0.9;
       this.recent = [];
       container.innerHTML = `
-        <div class="pk-sv" tabindex="0" aria-label="Saturation and brightness">
+        <div class="pk-sv" tabindex="0" role="slider" aria-label="Saturation and brightness" aria-valuemin="0" aria-valuemax="100">
           <div class="pk-cursor"></div>
         </div>
-        <div class="pk-hue" tabindex="0" aria-label="Hue">
+        <div class="pk-hue" tabindex="0" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360">
           <div class="pk-hue-cursor"></div>
         </div>
         <div class="pk-row">
-          <div class="pk-swatch"></div>
-          <label class="pk-hexwrap"><span>HEX</span><input class="pk-hex" maxlength="7" spellcheck="false" autocomplete="off"></label>
+          <div class="pk-swatch" aria-hidden="true"></div>
+          <label class="pk-hexwrap"><span>HEX</span><input class="pk-hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Hex colour"></label>
           <div class="pk-hsv">
-            <label>H <input type="number" class="pk-num" data-k="h" min="0" max="360"></label>
-            <label>S <input type="number" class="pk-num" data-k="s" min="0" max="100"></label>
-            <label>B <input type="number" class="pk-num" data-k="v" min="0" max="100"></label>
+            <label>H <input type="number" class="pk-num" data-k="h" min="0" max="360" aria-label="Hue, 0 to 360"></label>
+            <label>S <input type="number" class="pk-num" data-k="s" min="0" max="100" aria-label="Saturation, 0 to 100"></label>
+            <label>B <input type="number" class="pk-num" data-k="v" min="0" max="100" aria-label="Brightness, 0 to 100"></label>
           </div>
         </div>
-        <div class="pk-recent" aria-label="Recent colours"></div>`;
+        <div class="pk-recent" role="group" aria-label="Recent colours"></div>`;
       this.el = container;
       this.sv = container.querySelector('.pk-sv');
       this.svCursor = container.querySelector('.pk-cursor');
@@ -104,6 +104,10 @@
       if (document.activeElement !== this.hexInput) this.hexInput.value = hex.toUpperCase();
       const vals = { h: Math.round(this.h), s: Math.round(this.s * 100), v: Math.round(this.v * 100) };
       this.nums.forEach(i => { if (document.activeElement !== i) i.value = vals[i.dataset.k]; });
+      this.sv.setAttribute('aria-valuenow', vals.s);
+      this.sv.setAttribute('aria-valuetext', `Saturation ${vals.s} percent, brightness ${vals.v} percent`);
+      this.hue.setAttribute('aria-valuenow', vals.h);
+      this.hue.setAttribute('aria-valuetext', `Hue ${vals.h} degrees`);
       this.el.style.setProperty('--pk-current', hex);
       if (fire) this.onChange(hex);
     }

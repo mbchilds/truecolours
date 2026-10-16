@@ -9,6 +9,8 @@
   const SEAM_INK = [118, 120, 126];      // seam colour while the region is unfilled
   const SEAM_DARKEN = 0.78;              // filled: the seam is the fill colour, darkened
   const DETAIL_INK = [172, 174, 180];    // detail edge while unfilled; disappears once filled
+  // Keyboard play: the selected region gets a dashed outline in these two colours, so it shows on any flag colour.
+  const RING_A = [46, 230, 197], RING_B = [11, 21, 38];
 
   const Assets = {
     manifest: null,
@@ -101,7 +103,8 @@
       this.fills = new Map();      // regionId -> hex
       this.hover = 0;
       this.flag = null; this.meta = null;
-      this.onFill = () => {}; this.onHover = () => {};
+      this.onFill = () => {}; this.onHover = () => {}; this.onAnnounce = () => {};
+      this.order = []; this.kbIndex = -1; this.ring = null;
       this.currentColour = '#ff0000';
       this.interactive = true;
       this.bind();
@@ -115,6 +118,10 @@
       const flag = await Assets.loadFlag(meta.code);
       if (id !== this.loadId) return false;
       this.flag = flag;
+      // keyboard order: the regions top to bottom, then left to right (rows are bands an eighth of the flag high)
+      const band = flag.h / 8;
+      this.order = meta.regions.slice().sort((a, b) => Math.round(a.cy / band) - Math.round(b.cy / band) || a.cx - b.cx || a.id - b.id);
+      this.kbIndex = -1; this.ring = null;
       this.canvas.width = this.flag.w; this.canvas.height = this.flag.h;
       this.imgData = this.ctx.createImageData(this.flag.w, this.flag.h);
       this.fills = new Map(); this.hover = 0;
@@ -150,6 +157,44 @@
         const id = this.regionAt(e.clientX, e.clientY);
         if (id) { this.fill(id, this.currentColour); }
       });
+      // keyboard: tabbing in outlines a region; arrows move between regions; Enter or Space fills it
+      c.addEventListener('keydown', e => this.onKey(e));
+      c.addEventListener('focus', () => { if (c.matches(':focus-visible') && this.flag) this.select(Math.max(0, this.kbIndex), false); });
+      c.addEventListener('blur', () => { if (this.ring) { this.ring = null; if (this.flag) this.render(); } });
+    }
+
+    onKey(e) {
+      if (!this.interactive || !this.flag || !this.order.length || e.altKey || e.ctrlKey || e.metaKey) return;
+      const n = this.order.length, i = this.kbIndex;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': e.preventDefault(); return this.select(i < 0 ? 0 : (i + 1) % n, true);
+        case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); return this.select(i < 0 ? n - 1 : (i - 1 + n) % n, true);
+        case 'Home': e.preventDefault(); return this.select(0, true);
+        case 'End': e.preventDefault(); return this.select(n - 1, true);
+        case 'Enter': case ' ':
+          e.preventDefault();
+          if (i < 0) return this.select(0, true);
+          this.fill(this.order[i].id, this.currentColour);
+          return this.onAnnounce(this.describe(i));
+      }
+    }
+
+    // Outline region number `i` of the keyboard order (and say which it is).
+    select(i, announce) {
+      this.kbIndex = i;
+      this.ring = ringMask(this.flag, this.order[i].id);
+      this.render();
+      if (announce) this.onAnnounce(this.describe(i));
+    }
+
+    // "Region 2 of 5: top left, medium, not filled yet" - where it is, how big, and what the player has put there
+    // (never the real colour: that would give the answer away).
+    describe(i) {
+      const r = this.order[i], w = this.flag.w, h = this.flag.h, fill = this.fills.get(r.id);
+      const col = r.cx < w / 3 ? 'left' : r.cx > w * 2 / 3 ? 'right' : 'centre', row = r.cy < h / 3 ? 'top' : r.cy > h * 2 / 3 ? 'bottom' : 'middle';
+      const where = col === 'centre' && row === 'middle' ? 'centre' : col === 'centre' ? row : row === 'middle' ? col : `${row} ${col}`;
+      const size = r.area >= 0.25 ? 'large' : r.area >= 0.08 ? 'medium' : 'small';
+      return `Region ${i + 1} of ${this.order.length}: ${where}, ${size}, ${fill ? `filled ${C.describe(fill).toLowerCase()} (${fill})` : 'not filled yet'}`;
     }
 
     fill(id, hex) {
@@ -160,7 +205,7 @@
     clear() { this.fills = new Map(); this.render(); }
     get filledCount() { return this.fills.size; }
 
-    render() { paint(this.imgData, this.flag, this.fills, this.hover); this.ctx.putImageData(this.imgData, 0, 0); }
+    render() { paint(this.imgData, this.flag, this.fills, this.hover, this.ring); this.ctx.putImageData(this.imgData, 0, 0); }
 
     // Draw a finished attempt into any canvas (used on the results screen)
     static paintInto(canvas, flag, fills) {
@@ -172,7 +217,23 @@
     }
   }
 
-  function paint(imgData, flag, fills, hover) {
+  // The outline for one region: a band about four pixels wide, half inside the region and half outside it.
+  function ringMask(flag, id) {
+    const { w, h, labels } = flag, edge = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x, inside = labels[i] === id;
+        if (inside && (x === 0 || y === 0 || x === w - 1 || y === h - 1)) edge[i] = 1;      // the flag's own border counts
+        if (x + 1 < w && (labels[i + 1] === id) !== inside) { edge[i] = 1; edge[i + 1] = 1; }
+        if (y + 1 < h && (labels[i + w] === id) !== inside) { edge[i] = 1; edge[i + w] = 1; }
+      }
+    }
+    const ring = edge.slice();                                   // thicken by one pixel all round
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) { const i = y * w + x; if (!ring[i] && (edge[i - 1] || edge[i + 1] || edge[i - w] || edge[i + w])) ring[i] = 1; }
+    return ring;
+  }
+
+  function paint(imgData, flag, fills, hover, ring) {
     const out = imgData.data, base = flag.base.data, labels = flag.labels, edge = flag.edge;
     const w = flag.w, n = labels.length;
     const lut = [];   // regionId -> [r,g,b] or undefined
@@ -196,6 +257,7 @@
         else { out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; }
         out[o + 3] = 255;
       }
+      if (ring && ring[i]) { const k = ((x + y) >> 3) & 1 ? RING_A : RING_B; out[o] = k[0]; out[o + 1] = k[1]; out[o + 2] = k[2]; out[o + 3] = 255; }
       if (++x === w) { x = 0; y++; }
     }
   }

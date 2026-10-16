@@ -42,13 +42,21 @@
     return id;
   }
   function show(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === screenId));
+    const target = $(screenId), changed = !target.classList.contains('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s === target));
     window.scrollTo(0, 0);
+    if (changed) queueMicrotask(() => focusHeading(target));         // after the caller has filled the screen in
+  }
+  // A new screen: put focus on its heading so keyboard and screen-reader users know where they are. tabindex -1 lets
+  // it take focus without joining the tab order.
+  function focusHeading(screen) {
+    const h = screen.classList.contains('active') && screen.querySelector('h1');
+    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
   }
   let toastTimer;
   function toast(msg) {
-    const t = $('toast'); t.textContent = msg; t.hidden = false; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.hidden = true, 300); }, 2200);
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');     // a live region: it stays in the page so changes get announced
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { if (!t.classList.contains('show')) t.textContent = ''; }, 300); }, 2200);
   }
   const fmt = n => Math.round(n).toLocaleString('en-GB');
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -136,6 +144,7 @@
     setLogoFlag();
 
     board = new window.FlagBoard($('flag-canvas'));
+    board.onAnnounce = text => { $('board-status').textContent = text; };
     picker = new window.Picker($('picker'), { onChange: hex => { board.currentColour = hex; } });
     board.currentColour = picker.hex;
     board.onFill = (id, hex) => { picker.remember(hex); updateProgress(); };
@@ -147,15 +156,36 @@
     $('btn-again').addEventListener('click', startQuick);
     $('btn-clear').addEventListener('click', () => { board.clear(); updateProgress(); });
     $('btn-submit').addEventListener('click', submit);
-    $('btn-how').addEventListener('click', () => $('modal-how').hidden = false);
-    $('btn-how-close').addEventListener('click', () => $('modal-how').hidden = true);
-    $('modal-how').addEventListener('click', e => { if (e.target.id === 'modal-how') e.target.hidden = true; });
+    $('btn-how').addEventListener('click', openHow);
+    $('btn-how-close').addEventListener('click', closeHow);
+    $('modal-how').addEventListener('click', e => { if (e.target.id === 'modal-how') closeHow(); });
+    document.addEventListener('keydown', e => {
+      if ($('modal-how').hidden) return;
+      if (e.key === 'Escape') return closeHow();
+      if (e.key !== 'Tab') return;                                  // keep Tab going round inside the dialog
+      const f = [...$('modal-how').querySelectorAll('button, a[href], input, [tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent);
+      if (!f.length) return;
+      const end = e.shiftKey ? f[0] : f[f.length - 1];
+      if (document.activeElement === end) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); }
+    });
     document.addEventListener('click', onNavClick);
     $('btn-result-back').addEventListener('click', goHome);
     $('btn-archive-back').addEventListener('click', () => (state.calFromHome ? goHome() : openDay(state.daily.key)));
 
     refreshDailyCard(); refreshStreaks();
     if (new URLSearchParams(location.search).has('daily')) startDaily();
+  }
+
+  // While the dialog is open the rest of the page is inert, so Tab can't wander behind it.
+  let howOpener = null;
+  function openHow() {
+    howOpener = document.activeElement;
+    $('main').inert = true; $('modal-how').hidden = false;
+    $('btn-how-close').focus();
+  }
+  function closeHow() {
+    $('modal-how').hidden = true; $('main').inert = false;
+    if (howOpener && document.contains(howOpener)) howOpener.focus({ preventScroll: true });
   }
 
   function goHome() {
@@ -263,7 +293,7 @@
         <div class="sc-head">${s.current > 1 ? `Played ${num} days in a row` : `Streak started: day ${num}`}</div>
         <div class="sc-sub">${sub}</div>
       </div>
-      <div class="sc-week"${log ? '' : ' aria-hidden="true"'}>${weekStrip(s, log, null)}</div>
+      <div class="sc-week"${log ? ' role="group" aria-label="The last seven days"' : ' aria-hidden="true"'}>${weekStrip(s, log, null)}</div>
       ${log ? '<div class="sc-foot"><span>Tap a day to catch up or look back</span><button class="sc-link" data-nav="calendar">All days ›</button></div>' : ''}`;
     el.hidden = false;
   }
@@ -326,6 +356,8 @@
     const meta = state.flags[state.round]; state.meta = meta;
     show('screen-play');
     $('country-name').textContent = meta.name.toUpperCase();
+    $('flag-canvas').setAttribute('aria-label', `Flag of ${meta.name} to colour in: ${meta.regions.length} region${meta.regions.length === 1 ? '' : 's'}`);
+    $('board-status').textContent = '';
     const daily = state.mode === 'daily', stepper = daily && archiveOpen();    // once past days are unlocked, the day stepper replaces the label
     $('round-label').textContent = daily ? `Daily #${state.daily.number}` : `Round ${state.round + 1} of ${CONFIG.rounds}`;
     $('round-label').hidden = stepper;
@@ -388,6 +420,9 @@
     $('result-country').textContent = meta.name.toUpperCase();
     $('result-verdict').textContent = C.verdict(result.points);
     animateNumber($('result-points'), result.points);
+    $('result-summary').textContent = `${meta.name}: ${result.points} out of 1000. ${C.verdict(result.points)}.`;
+    $('result-yours').setAttribute('aria-label', `Your colouring of the flag of ${meta.name}; the colours you used are listed below`);
+    $('result-actual').setAttribute('aria-label', `The real flag of ${meta.name}; its colours are listed below`);
 
     const flag = await Assets.loadFlag(meta.code);
     if (mine !== renderId) return;                                    // superseded while the flag was downloading
@@ -438,8 +473,8 @@
   }
 
   // ----------------------------------------------------------------- past days (the archive)
-  const CHEV_L = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>';
-  const CHEV_R = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg>';
+  const CHEV_L = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><use href="#i-chev-l"/></svg>';
+  const CHEV_R = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><use href="#i-chev-r"/></svg>';
 
   // Which flag a saved result is for, and whether the result still fits it. Results saved before the archive existed don't
   // record the flag, and flags have been redrawn since, so try the likely candidates and keep the one that reproduces the
@@ -471,6 +506,8 @@
     $('result-country').textContent = meta ? meta.name.toUpperCase() : `DAILY #${d.number}`;
     $('result-verdict').textContent = C.verdict(rec.points);
     animateNumber($('result-points'), rec.points);
+    $('result-summary').textContent = `${meta ? meta.name : 'Daily #' + d.number}: ${rec.points} out of 1000. ${C.verdict(rec.points)}.`;
+    if (meta) $('result-actual').setAttribute('aria-label', `The real flag of ${meta.name}`);
     const ds = $('daily-stats'); ds.hidden = false;
     const used = [...new Set((Array.isArray(rec.fills) ? rec.fills : []).map(f => f && f[1]).filter(h => /^#[0-9a-f]{6}$/i.test(h)))].slice(0, 12);
     ds.innerHTML = `<div class="ds-loading">We can't redraw this one: the flag has been updated since you played, so your colouring no longer fits it. Your score still counts.${used.length ? `<span class="stale-sw" title="The colours you used">${used.map(h => `<i style="background:${h}"></i>`).join('')}</span>` : ''}</div>`;
@@ -485,11 +522,14 @@
   // The ‹ date › stepper at the top of the daily screens (once past days are unlocked). The arrows go a day at a time;
   // "next" is hidden on today, since there is nothing after it, and "previous" on Daily #1.
   function dayNav(el, key) {
-    const today = utcDateKey(), i = dayIdx(key);
+    const today = utcDateKey(), i = dayIdx(key), had = el.contains(document.activeElement) ? document.activeElement.dataset.nav : null;
+    el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Choose a day');
     el.innerHTML = `
       <button class="dn-btn" data-nav="prev" aria-label="Previous day"${i <= 0 ? ' data-off disabled' : ''}>${CHEV_L}</button>
       <span class="dn-label">#${i + 1} · ${key === today ? 'Today' : fmtDay(key)}</span>
       <button class="dn-btn" data-nav="next" aria-label="Next day"${key >= today ? ' data-off disabled' : ''}>${CHEV_R}</button>`;
+    const again = had && el.querySelector(`[data-nav="${had}"]:not([disabled])`);     // stepping with the keyboard: stay on the same arrow
+    if (again) again.focus({ preventScroll: true });
   }
 
   // Everything around a daily result that depends on which day it is: the stepper, the streak card (for a day played on
@@ -507,6 +547,7 @@
       + '<button class="btn ghost" data-nav="calendar">All days</button><button class="btn ghost" id="btn-res-home">Menu</button>';
     if (canShare) $('btn-share').addEventListener('click', onShare);
     $('btn-res-home').addEventListener('click', goHome);
+    if (!document.activeElement || document.activeElement === document.body) focusHeading($('screen-result'));   // the button that was pressed has just been replaced
   }
 
   // The calendar of every daily so far, newest month first: tap a day to play or review it.
@@ -522,7 +563,7 @@
       <div class="ds-item"><span class="ds-num">${s.best}</span><span class="ds-label">best streak</span></div>`;
     $('archive-grid').innerHTML = S.calendar(log, today, EPOCH_KEY).map(m => `
       <section class="cal-month">
-        <h3>${m.label}</h3>
+        <h2>${m.label}</h2>
         <div class="cal-dow" aria-hidden="true">${[...'MTWTFSS'].map(c => `<i>${c}</i>`).join('')}</div>
         <div class="cal-grid">${'<i></i>'.repeat(m.lead)}${m.days.map(d => d.state === 'off' ? '<i></i>'
           : `<button class="cal-day ${d.state}${d.key === today ? ' today' : ''}${d.key === view ? ' view' : ''}" data-day="${d.key}" aria-label="Daily #${dayIdx(d.key) + 1}, ${fmtDay(d.key)}: ${d.state === 'on' ? `played, ${d.sum}` : d.state === 'late' ? `caught up late, ${d.sum}` : 'not played yet'}">${d.day}${d.sum == null ? '' : `<small>${d.sum}</small>`}</button>`).join('')}</div>
@@ -548,6 +589,7 @@
     show('screen-final');
     const max = CONFIG.rounds * 1000;
     animateNumber($('final-points'), state.total);
+    $('final-summary').textContent = `${state.total} out of ${max}. ${overallVerdict(state.total, max)}.`;
     $('final-verdict').textContent = `${overallVerdict(state.total, max)} · ${Math.round(state.total / max * 100)}% accuracy`;
     if (state.streak) streakCard($('final-streak'), 'quick', state.streak, state.streak.fresh); else $('final-streak').hidden = true;
     $('rounds-list').innerHTML = state.results.map((r, i) => `
@@ -555,7 +597,9 @@
     track('quick_complete', { score: state.total });
   }
 
+  const REDUCED_MOTION = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
   function animateNumber(el, target) {
+    if (REDUCED_MOTION.matches) { el.counting = 0; el.textContent = fmt(target); return; }
     const start = performance.now(), dur = 900;
     el.counting = start;                                       // a newer count-up on the same number takes over
     const step = now => {

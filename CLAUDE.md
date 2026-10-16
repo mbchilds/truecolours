@@ -43,7 +43,9 @@ So the routine's job is **diagnose and report, never ship**:
      `tools/build_flags.py` / `tools/countries.py`, `js/color.js` scoring
      constants, `js/game.js` `CONFIG.dailyEpoch`/`CONFIG.dailySeed` or
      anything touching which flag is any day's Daily Challenge, the
-     Google Analytics ID in `index.html`, `api/daily.js` or the Redis
+     Google Analytics ID in `index.html` (the `ga-measurement-id` meta tag), the consent and
+     privacy code and pages (`js/privacy.js`, `privacy.html`, `terms.html`: what the site
+     stores and sends has to stay in step with what they say), `api/daily.js` or the Redis
      schema/keys, or anything you're not fully confident about. Say
      clearly in the email that this needs Marcus's own careful review
      before it goes anywhere near `main`, and flag explicitly if it
