@@ -18,8 +18,8 @@
     return memory;
   }
   function remember(accept) {
-    memory = accept;
-    try { localStorage.setItem(KEY, JSON.stringify({ v: VERSION, a: accept, t: new Date().toISOString() })); } catch (e) { /* private mode */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ v: VERSION, a: accept, t: new Date().toISOString() })); memory = null; }
+    catch (e) { memory = accept; }                // storage blocked (private mode): the choice lasts for this page only
   }
 
   // ---- Google Analytics: only ever started after "accept"
@@ -87,14 +87,14 @@
 
   // ---- delete my data: everything the game keeps in this browser. tc:flagcheck is the dev tool's own notes, not player data.
   function deleteData() {
-    if (!window.confirm("Delete everything FlagFill has saved on this device?\n\nThat includes your streaks, scores and past dailies. This can't be undone.")) return false;
-    try {
-      for (const store of [localStorage, sessionStorage]) {
-        const doomed = [];
+    if (!window.confirm("Delete your FlagFill game data on this device?\n\nThat includes your streaks, scores and past dailies. This can't be undone.")) return false;
+    for (const area of ['localStorage', 'sessionStorage']) {
+      try {
+        const store = window[area], doomed = [];
         for (let i = 0; i < store.length; i++) { const k = store.key(i); if (k && k.startsWith('tc:') && k !== 'tc:flagcheck') doomed.push(k); }
         doomed.forEach(k => store.removeItem(k));
-      }
-    } catch (e) { /* storage unavailable: nothing was saved */ }
+      } catch (e) { /* this storage is unavailable: nothing was saved in it */ }
+    }
     memory = null;
     stopAnalytics();
     location.assign('./');                       // start clean: the banner asks again, and the game reloads with no history
@@ -111,13 +111,13 @@
     else if (p === 'delete') deleteData();
   });
   document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || !forced || !banner || banner.hidden) return;     // reopened from "Cookie settings": close it, choice unchanged
+    if (e.key !== 'Escape' || !forced || !banner || banner.hidden || document.querySelector('.modal:not([hidden])')) return;   // reopened from "Cookie settings": close it, choice unchanged (an open dialog gets the key first)
     forced = false; sync(); reserveSpace();
     if (opener && document.contains(opener) && !opener.hidden) opener.focus({ preventScroll: true });
   });
   // another tab changed the choice: follow it
   window.addEventListener('storage', e => {
-    if (e.key !== KEY) return;
+    if (e.key !== KEY && e.key !== null) return;  // null = storage was cleared
     choice() === true ? startAnalytics() : stopAnalytics();
     sync(); reserveSpace();
   });

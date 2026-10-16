@@ -1,0 +1,6 @@
+# Project notes and build tooling are not part of the site. Without this file Vercel publishes the whole repository
+# as static files, which put CLAUDE.md (with a personal email address and the routine's notes) on the public web.
+# package.json must stay: the leaderboard function installs its dependency from it.
+CLAUDE.md
+README.md
+tools/

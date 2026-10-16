@@ -36,6 +36,7 @@
       this.recentEl = container.querySelector('.pk-recent');
       this.bindDrag(this.sv, (x, y) => { this.s = x; this.v = 1 - y; this.update(); });
       this.bindDrag(this.hue, (x) => { this.h = x * 360; if (this.h >= 360) this.h = 359.99; this.update(); });
+      this.hexInput.addEventListener('input', () => { if (/^#?[0-9a-f]{6}$/i.test(this.hexInput.value.trim())) this.setHex(this.hexInput.value, true); });   // complete: use it now, don't wait for blur
       this.hexInput.addEventListener('change', () => this.setHex(this.hexInput.value, true));
       this.hexInput.addEventListener('keydown', e => { if (e.key === 'Enter') { this.hexInput.blur(); } });
       this.nums.forEach(inp => inp.addEventListener('change', () => {

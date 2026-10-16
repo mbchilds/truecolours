@@ -18,6 +18,8 @@ let html = read('index.html');
 const css = read('style.css').replace(/url\("(fonts\/[^"]+)"\)/g, (_, f) => `url("data:font/woff2;base64,${fs.readFileSync(path.join(root, f)).toString('base64')}")`);
 html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + css + '\n</style>');
 html = html.replace(/<link rel="preload" href="fonts\/[^>]*>\n?/g, '');
+// the single file has no privacy / terms pages to link to
+html = html.replace(/\s*<nav class="legal-links"[\s\S]*?<\/nav>/, '');
 // no measurement ID = js/privacy.js starts no analytics and shows no banner
 html = html.replace(/<meta name="ga-measurement-id"[^>]*>/, '<!-- analytics disabled in preview build -->');
 const scripts = ['js/color.js', 'js/streak.js', 'js/privacy.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');

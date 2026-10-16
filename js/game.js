@@ -36,10 +36,23 @@
     const midnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     return Math.floor((midnight - CONFIG.dailyEpoch) / 86400000);
   }
+  // A random id for this browser, made the first time it is needed. 96 random bits, nothing else in it. (Ids made by older
+  // versions were Math.random() plus the time; they keep working, and are never sent as they are either.)
   function clientId() {
     let id = store.get('cid');
-    if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('cid', id); }
+    if (!id) {
+      try { id = [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, '0')).join(''); }
+      catch (e) { id = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+      store.set('cid', id);
+    }
     return id;
+  }
+  // What the leaderboard gets in place of the id: a one-way hash of the id and the day. That is enough to tell two players on
+  // the same day apart (all it needs), but it is different every day and can't be turned back into the id, so nothing on the
+  // server can follow a player from one day to the next. Without WebCrypto (an insecure page) nothing is sent at all.
+  async function dayCode(key) {
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientId() + ':' + key));
+    return [...new Uint8Array(hash)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
   }
   function show(screenId) {
     const target = $(screenId), changed = !target.classList.contains('active');
@@ -398,7 +411,9 @@
       mem[key] = saved; store.set('daily:' + key, saved);
       showResult(meta, fills, result, null, true, true);
       if (late || NO_POST) return;                         // catch-ups never go to the leaderboard
+      const lb = state.lb = { key, done: false, stats: null };   // the reply can beat the result screen to it (a quick failure), so the screen checks here too
       submitDailyScore(result.points).then(stats => {
+        lb.done = true; lb.stats = stats;
         if (stats) { saved.stats = stats; store.set('daily:' + key, saved); }
         // the player may have moved on to another day while this was in flight
         if (state.daily && state.daily.key === key && $('screen-result').classList.contains('active')) renderDailyStats(stats, result.points);
@@ -449,7 +464,11 @@
       dayExtras(d, fresh, () => share(meta, result));
       if (d.late) ds.hidden = true;                                  // a catch-up has no leaderboard numbers
       else if (stats) { ds.hidden = false; renderDailyStats(stats, result.points, d.key !== utcDateKey()); }
-      else if (fresh) { ds.hidden = false; ds.innerHTML = `<div class="ds-loading">${NO_POST ? 'Leaderboard is off in this tab (?nopost): your score is saved on this device only.' : 'Comparing with other players…'}</div>`; }
+      else if (fresh) {
+        ds.hidden = false;
+        if (state.lb && state.lb.key === d.key && state.lb.done) renderDailyStats(state.lb.stats, result.points);     // the reply already arrived
+        else ds.innerHTML = `<div class="ds-loading">${NO_POST ? 'Leaderboard is off in this tab (?nopost): your score is saved on this device only.' : 'Comparing with other players…'}</div>`;
+      }
       else ds.hidden = true;                                         // reopened with no leaderboard numbers saved
     } else {
       $('result-streak').hidden = true;
@@ -613,10 +632,11 @@
 
   // ----------------------------------------------------------------- daily API
   async function submitDailyScore(points) {
+    const date = state.daily.key;                                // the day this score is for, even if the player has moved on by the time it is sent
     try {
       const res = await fetch(CONFIG.api + '/api/daily', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: state.daily.key, score: points, cid: clientId() }),
+        body: JSON.stringify({ date, score: points, cid: await dayCode(date) }),
       });
       if (!res.ok) return null;
       return await res.json();

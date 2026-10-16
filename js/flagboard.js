@@ -126,6 +126,7 @@
       this.imgData = this.ctx.createImageData(this.flag.w, this.flag.h);
       this.fills = new Map(); this.hover = 0;
       this.render();
+      if (document.activeElement === this.canvas && this.canvas.matches(':focus-visible')) this.select(0, true);   // tabbed in while this flag was still downloading
       return true;
     }
 
@@ -159,7 +160,7 @@
       });
       // keyboard: tabbing in outlines a region; arrows move between regions; Enter or Space fills it
       c.addEventListener('keydown', e => this.onKey(e));
-      c.addEventListener('focus', () => { if (c.matches(':focus-visible') && this.flag) this.select(Math.max(0, this.kbIndex), false); });
+      c.addEventListener('focus', () => { if (this.interactive && this.flag && c.matches(':focus-visible')) this.select(Math.max(0, this.kbIndex), true); });
       c.addEventListener('blur', () => { if (this.ring) { this.ring = null; if (this.flag) this.render(); } });
     }
 

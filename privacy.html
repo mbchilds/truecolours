@@ -24,7 +24,7 @@
       <ul>
         <li>FlagFill has no accounts. It never asks for your name, email address or location.</li>
         <li>Your streaks, scores and past dailies are saved on your own device, in your browser.</li>
-        <li>When you finish the Daily Challenge on its day, your score and a random ID are sent to the daily leaderboard, so the day's average and the "players you beat" figure can be worked out. The random ID is deleted automatically within five days.</li>
+        <li>When you finish the Daily Challenge on its day, your score and a code that stands in for you are sent to the daily leaderboard, so the day's average and the "players you beat" figure can be worked out. The code is different every day, so days can't be linked, and it is deleted automatically within five days.</li>
         <li>Google Analytics, which tells me how the game is used, only runs if you say yes. If you say no, nothing is sent to Google.</li>
         <li>You can change your mind, or delete everything FlagFill has saved on your device, at any time: see <a href="#your-choices">Your choices</a>.</li>
       </ul>
@@ -36,17 +36,17 @@
     <h2 id="data">What FlagFill uses, and why</h2>
 
     <h3>Saved on your device</h3>
-    <p>The game saves what it needs in your browser's storage: your result for each daily (the colours you chose, your score and the date), a log of the days you finished Quick Play, a random ID (see the next section), and your analytics choice. This is how your streaks, past dailies and results work. It stays on your device and is not sent to me. It is kept until you delete it (see <a href="#your-choices">Your choices</a>) or clear your browser's site data. <em>Legal basis: legitimate interests, running the game you came to play.</em></p>
+    <p>The game saves what it needs in your browser's storage. For each daily you finish: which flag it was, the colours you chose, your score, the date, whether you played it late, and the leaderboard figures you were shown (the day's average, the number of players and how many you beat). For Quick Play: how many flags you played and your total points on each day you finish a game. Also a random ID (explained below) and your analytics choice. This is how your streaks, past dailies and results work. All of it stays on your device and is not sent to me, apart from your daily score and a code made from the random ID, which go to the leaderboard (next section). It is kept until you delete it (see <a href="#your-choices">Your choices</a>) or clear your browser's site data. <em>Legal basis: legitimate interests, running the game you came to play.</em></p>
 
     <h3>The daily leaderboard</h3>
-    <p>When you finish the Daily Challenge on its own day, your browser sends three things to the leaderboard: the date, your score (0 to 1,000) and your random ID. Nothing else is sent: not your name, not your colouring, and nothing about catch-up plays of past days, which are never sent.</p>
-    <p>Your score is added to that day's totals (how many players, the total of all scores, and how many scores fell in each band of 50 points). That is how the day's average and the "players you beat" figure are worked out. The random ID is kept only to stop one browser being counted twice in the same day, and is deleted automatically within five days at the latest. The totals contain no IDs and are kept. <em>Legal basis: legitimate interests, a working and fair leaderboard.</em></p>
+    <p>When you finish the Daily Challenge on its own day (including if midnight UTC passes while you are playing), your browser sends three things to the leaderboard: the date, your score (0 to 1,000) and a code that stands in for you. Your device makes that code from your random ID and the date using a one-way scramble (a hash), so it is different every day and cannot be turned back into your ID. The leaderboard cannot link one day's code to the next. Nothing else is in the request: not your name, not your colouring, and nothing about catch-up plays of past days, which are never sent. Like any request to a website, it also carries technical details such as your IP address (see Hosting below), and if you have allowed analytics your browser attaches its Google Analytics cookies too. The leaderboard ignores both.</p>
+    <p>Your score is added to that day's totals (how many players, the total of all scores, and how many scores fell in each band of 50 points). That is how the day's average and the "players you beat" figure are worked out. The code is kept only to stop one browser being counted twice on the same day, and is deleted automatically within five days at the latest. The totals contain no codes and are not linked to anyone; they are kept. <em>Legal basis: legitimate interests, a working and fair leaderboard.</em></p>
 
     <h3>Hosting</h3>
     <p>When you load FlagFill, my hosting provider (Vercel) receives technical details such as your IP address, browser type and the page requested. It needs these to deliver the site and keep it secure. <em>Legal basis: legitimate interests, delivering and securing the service.</em></p>
 
     <h3>Analytics (only if you say yes)</h3>
-    <p>If you choose to allow analytics, FlagFill loads Google Analytics. It records visits and how you use the site (for example page loads, scrolling and clicks on links that leave the site), your device and browser type, your approximate location (country and city, worked out from your IP address; Google Analytics does not keep the address itself), and what happens in the game: which mode you start or finish, which country's flag, your score and your streak length. I use it to see which parts of FlagFill are used and to find problems. It is set up with Google signals and ad personalisation switched off, so it is not used for advertising. Google keeps this data for no longer than 14 months. <em>Legal basis: your consent. You can withdraw it at any time.</em></p>
+    <p>If you choose to allow analytics, FlagFill loads Google Analytics. It records visits and how you use the site (for example the address of the page, page loads, scrolling and clicks on links that leave the site), your device and browser type, your approximate location (country and city, worked out from your IP address; Google Analytics does not keep the address itself), and what happens in the game: which mode you start or finish, the daily number and the country's flag, the round, your score, your streak length, and when you press Share. I use it to see which parts of FlagFill are used and to find problems. It is set up with Google signals and ad personalisation switched off, and I do not use it for advertising. Google keeps this data for no longer than 14 months. <em>Legal basis: your consent. You can withdraw it at any time.</em></p>
 
     <h3>If you email me</h3>
     <p>I will use your email address and message to reply, and delete them when they are no longer needed. <em>Legal basis: legitimate interests, answering you.</em></p>
@@ -57,15 +57,16 @@
     <h3>Essential: the game needs these (no consent needed)</h3>
     <dl class="legal-list">
       <div><dt><code>tc:daily:&lt;date&gt;</code> and <code>tc:qdays</code> <span>local storage</span></dt><dd>Your saved daily results and Quick Play streak log. Kept until you delete them.</dd></div>
-      <div><dt><code>tc:cid</code> <span>local storage</span></dt><dd>The random ID used so the daily leaderboard counts you once. It is not linked to your name or email. Kept until you delete it.</dd></div>
+      <div><dt><code>tc:cid</code> <span>local storage</span></dt><dd>A random ID made on your device. It is never sent as it is: the daily leaderboard gets a scrambled code made from it and the date, so that you are counted once a day. It is not linked to your name or email. Kept until you delete it.</dd></div>
       <div><dt><code>tc:consent</code> <span>local storage</span></dt><dd>Remembers your analytics choice and when you made it. Kept until you delete it.</dd></div>
       <div><dt><code>tc:nopost</code> <span>session storage</span></dt><dd>Only set if the site is opened with <code>?nopost</code> (used for testing). Gone when you close the tab.</dd></div>
+      <div><dt><code>tc:flagcheck</code> <span>local storage</span></dt><dd>Only if you open <code>flagcheck.html</code>, a developer page that is not part of the game, which keeps its own notes here. "Delete my data" leaves it alone.</dd></div>
     </dl>
 
     <h3>Analytics: only if you allow it</h3>
     <dl class="legal-list">
-      <div><dt><code>_ga</code> <span>cookie, 1 year</span></dt><dd>Google Analytics uses it to tell one visitor from another.</dd></div>
-      <div><dt><code>_ga_SR1N5CH6R0</code> <span>cookie, 1 year</span></dt><dd>Google Analytics uses it to keep track of a visit.</dd></div>
+      <div><dt><code>_ga</code> <span>cookie, 1 year from your last visit</span></dt><dd>Google Analytics uses it to tell one visitor from another.</dd></div>
+      <div><dt><code>_ga_SR1N5CH6R0</code> <span>cookie, 1 year from your last visit</span></dt><dd>Google Analytics uses it to keep track of a visit.</dd></div>
     </dl>
     <p>If you reject analytics, or withdraw consent later, these cookies are deleted and nothing further is sent to Google. You can change your choice at any time in <a href="#your-choices">Your choices</a> below, or from "Cookie settings" at the bottom of the FlagFill home screen.</p>
 
@@ -80,16 +81,16 @@
     <h2 id="keep">How long data is kept</h2>
     <ul>
       <li><strong>On your device:</strong> until you delete it or clear your browser data.</li>
-      <li><strong>Random ID on the leaderboard:</strong> deleted automatically within five days.</li>
-      <li><strong>Leaderboard totals:</strong> kept. They contain no personal data.</li>
-      <li><strong>Analytics:</strong> cookies last 1 year; Google keeps the data for no longer than 14 months.</li>
+      <li><strong>Your daily code on the leaderboard:</strong> deleted automatically within five days.</li>
+      <li><strong>Leaderboard totals:</strong> kept. They contain no codes and are not linked to anyone.</li>
+      <li><strong>Analytics:</strong> the cookies last 1 year from your last visit; Google keeps the data for no longer than 14 months.</li>
       <li><strong>Hosting logs:</strong> for as long as Vercel keeps them, which is short.</li>
       <li><strong>Emails to me:</strong> until they are no longer needed.</li>
     </ul>
 
     <h2 id="rights">Your rights</h2>
     <p>Under UK data protection law you can ask to see, correct or delete personal data about you, ask me to restrict or stop using it, ask for a copy, and withdraw consent at any time (withdrawing does not affect what happened before).</p>
-    <p>FlagFill does not know who you are, so most of this is in your hands already: use <a href="#your-choices">Your choices</a> to turn analytics off and to delete everything saved on your device. The leaderboard ID deletes itself within five days. To ask me to delete analytics data linked to your browser, email me the value of your <code>_ga</code> cookie so I can find it. For anything else, email me and I will reply within one month.</p>
+    <p>FlagFill does not know who you are, so most of this is in your hands already: use <a href="#your-choices">Your choices</a> to turn analytics off and to delete your game data from your device. The daily leaderboard codes delete themselves within five days. Rejecting analytics or deleting your data also removes the Google cookies, so if you want me to delete analytics data that Google already holds for your browser, first copy the value of your <code>_ga</code> cookie (in your browser's developer tools, under Application or Storage, then Cookies) and email it to me so I can find your data. For anything else, email me and I will reply within one month.</p>
 
     <h2 id="your-choices">Your choices</h2>
     <div class="legal-choices">
@@ -100,8 +101,8 @@
         <button type="button" class="btn" data-consent="reject" aria-pressed="false">Reject analytics</button>
       </div>
       <p class="choice-note">Your choice is saved in this browser and applies to the game.</p>
-      <h3>Delete what FlagFill has saved on this device</h3>
-      <p>This removes your streaks, scores, past dailies, leaderboard ID and analytics choice from this browser, and any Google Analytics cookies. It cannot be undone.</p>
+      <h3>Delete your game data on this device</h3>
+      <p>This removes your streaks, scores, past dailies, random ID and analytics choice from this browser, and any Google Analytics cookies. It cannot be undone.</p>
       <button type="button" class="btn danger" data-privacy="delete">Delete my data</button>
     </div>
 

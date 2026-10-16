@@ -48,6 +48,9 @@ body {
 .screen { display: none; min-height: 100vh; min-height: 100dvh; }
 .screen.active { display: block; animation: fade .25s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Home holds the fixed consent banner; a transform on its ancestor would pin the banner to the page instead of the window while it plays. */
+@keyframes fade-opacity { from { opacity: 0; } to { opacity: 1; } }
+#screen-home.active { animation-name: fade-opacity; }
 
 /* ---------------------------------------------------------------- home background globe */
 #screen-home { position: relative; overflow: hidden; }
@@ -403,7 +406,7 @@ button.sc-day:focus-visible, .cal-day:focus-visible, .dn-btn:focus-visible, .sc-
 
 /* ---------------------------------------------------------------- reduced motion (the streak card has its own block above) */
 @media (prefers-reduced-motion: reduce) {
-  .screen.active { animation: none; }
+  .screen.active, #screen-home.active { animation: none; }
   .btn, .mode-card, .toast, .dn-btn, .cal-day { transition: none; }
   .btn:hover, .btn:active, .mode-card:hover { transform: none; }
 }

@@ -74,9 +74,12 @@ reached.
 
 Per day, in Redis: a player count, a score sum, a histogram of scores in buckets of 50
 (for the "you beat X%" figure) and a set of random client ids so a player is only counted
-once. No names, emails or other details are stored. The id set expires 3 days after the
-last new player is added (and ids are only accepted for today and yesterday), so an id is
-gone within 5 days; the three totals contain no ids and are kept. The score itself is
+once. No names, emails or other details are stored. The browser does not send its stored id:
+it sends a one-way hash of that id and the date (`dayCode()` in `js/game.js`), so the set holds
+a different code for the same player each day and nothing on the server can follow a player
+from one day to the next. The set expires 3 days after the last new player is added (and
+codes are only accepted for today and yesterday), so a code is gone within 5 days; the three
+totals contain no codes and are kept. The score itself is
 calculated in the browser, so a determined person could fake a score - fine for a friendly
 daily, but don't run a prize competition on it.
 
@@ -91,7 +94,9 @@ banner, which is how `tools/build_preview.js` builds the single-file preview). I
 with analytics storage only: no ad storage, Google signals or ad personalisation, and a 1-year
 cookie.
 
-In the GA admin (these can't be set from the code): set event data retention to 2 months, and
+In the GA admin (these can't be set from the code, and the policy relies on them): set event data
+retention to 2 months (the policy promises no more than 14, Google's maximum), keep Google signals
+off, don't link the property to Google Ads, turn off the data-sharing settings you don't need, and
 consider switching off the Enhanced measurement options you don't use.
 
 Custom events sent (only when accepted): `start_daily`, `start_quick`, `round_complete`,
@@ -126,6 +131,10 @@ and stays that way until the tab is closed.
 * **No third-party requests on load.** The fonts are self-hosted (`fonts/`, with their SIL Open Font
   Licence texts); the flag artwork, map and everything else are served from the site. Google
   Analytics is the only third-party script and only after consent.
+* **Fonts are cached for a year.** `vercel.json` serves `/fonts/*` as immutable, so if you ever
+  change a font file, give it a new file name (and update the `@font-face` rule and the preloads).
+* **Not everything in the repo is published.** `.vercelignore` keeps `CLAUDE.md`, `README.md` and
+  `tools/` out of the deployment; without it Vercel serves the whole repository as static files.
 * **Licences.** flag-icons (MIT) and Natural Earth (public domain) are credited on the home screen
   and in `terms.html#credits`, with their licence files shipped alongside the data
   (`flags/LICENSE-flag-icons.txt`, `globe/LICENSE-naturalearth.txt`, `fonts/OFL-*.txt`). The icons
