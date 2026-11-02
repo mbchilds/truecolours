@@ -31,6 +31,7 @@ js/game.js          screens, modes, scoring, daily challenge, share, analytics e
 flagcheck.html      dev tool: play every flag in the catalogue one after another
 js/flagcheck.js     logic for flagcheck.html (see "Checking every flag" below)
 flags/              one .svg + one .bin (region map) per country, plus manifest.json
+og.png              the 1200x630 link-preview image (see "Link-preview image" below)
 fonts/              the two self-hosted fonts (variable woff2) and their licence texts
 privacy.html        privacy policy, incl. the cookie list (#cookies) and the player's controls (#your-choices)
 terms.html          terms of use, incl. credits and licences (#credits)
@@ -38,6 +39,7 @@ api/daily.js        Vercel serverless function (daily scores, Upstash Redis)
 tools/build_flags.py   regenerates flags/ from the flag-icons SVG set
 tools/build_preview.js bundles everything into one preview.html (no server needed)
 tools/countries.py     which countries are included + display-name overrides
+tools/build_og.mjs     renders og.png from the real flag SVGs + site fonts (node tools/build_og.mjs)
 tools/test_streak.mjs  unit tests for js/streak.js (npm run test:streak)
 ```
 
@@ -287,6 +289,29 @@ detail (emblem linework, lettering) there is a lighter 1px line on the fillable 
 which disappears when the region is filled - so fine detail such as Iran's border script
 does not turn into a black smear. Pre-filled pixels never get ink. Constants at the top of
 the file: `SEAM_INK`, `SEAM_DARKEN`, `DETAIL_INK`.
+
+## Link-preview image
+
+`og.png` (1200x630) is what chat apps and social sites show when the game's link is pasted:
+a tilted wall of real flags, mostly greyed out with a few left in colour, under the
+FlagFill wordmark. The `og:image` / `twitter:card` tags in `index.html` point at it by
+absolute URL (these tags must be absolute). To change the look, edit `tools/build_og.mjs`
+and run `node tools/build_og.mjs` (needs `npm install` for Playwright; set
+`CHROMIUM_PATH` if the browser lives somewhere non-default). Keep the PNG under about
+300 KB - WhatsApp drops larger preview images. Platforms cache previews, so after changing
+it use Facebook's Sharing Debugger / LinkedIn Post Inspector to force a re-scrape.
+
+### Possible future development: score-challenge share card
+
+Idea (not built): a per-share preview in the style of Wordle results, e.g. "I scored 87 on
+Daily #63. Can you beat me?", with the per-region scores. It must **never show the flag**,
+so it does not spoil the daily for whoever opens the link. It needs three things the
+static image does not: a server-side image endpoint (e.g. an `api/og` function using
+`@vercel/og`), a share-URL format that carries the score (e.g. `/?s=87&d=63`), and
+per-URL `og:` tags, which a static `index.html` cannot vary, so it would need an
+edge function or middleware. Check how the current share button builds its link first.
+It stays clear of the protected tier only if it adds new files and leaves `api/daily.js`,
+the Redis schema and the daily seed alone.
 
 ## Single-file preview
 
