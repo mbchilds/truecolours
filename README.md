@@ -28,6 +28,8 @@ js/picker.js        the colour picker component
 js/privacy.js       the analytics choice (Google Analytics only loads after "accept"), cookie cleanup, "delete my data"
 js/flagboard.js     loads a flag's region map and draws / fills the canvas
 js/game.js          screens, modes, scoring, daily challenge, share, analytics events
+js/spotgen.js       puzzle generator for the "spot the real flag" mode (pure functions, seeded; see "True Colours" below)
+js/spot.js          screens, rounds, feedback and share for that mode
 flagcheck.html      dev tool: play every flag in the catalogue one after another
 js/flagcheck.js     logic for flagcheck.html (see "Checking every flag" below)
 flags/              one .svg + one .bin (region map) per country, plus manifest.json
@@ -41,6 +43,7 @@ tools/build_preview.js bundles everything into one preview.html (no server neede
 tools/countries.py     which countries are included + display-name overrides
 tools/build_og.mjs     renders og.png from the real flag SVGs + site fonts (node tools/build_og.mjs)
 tools/test_streak.mjs  unit tests for js/streak.js (npm run test:streak)
+tools/test_spot.mjs    tests for js/spotgen.js, incl. "can the real flag be found without remembering it?" (npm run test:spot)
 ```
 
 ## Running it locally
@@ -312,6 +315,30 @@ per-URL `og:` tags, which a static `index.html` cannot vary, so it would need an
 edge function or middleware. Check how the current share button builds its link first.
 It stays clear of the protected tier only if it adds new files and leaves `api/daily.js`,
 the Redis schema and the daily seed alone.
+
+## True Colours: spot the real flag (prototype, working title)
+
+A second game, separate from the colouring game: five flags a day, the same five for everyone (UTC). Each round shows six
+versions of one flag; one is the real flag from the flag set and the rest have one colour changed. The player taps one,
+presses "Lock in", and sees at once if they were right (real flag glows green; a wrong pick goes coral and the real one is
+revealed). Score is the number right, out of 5. The home card links to it, and `?spot` opens it directly (that is the share link).
+
+How the puzzles are made (`js/spotgen.js`, tested by `npm run test:spot`):
+- Seeded by date + flag, so every player gets identical puzzles. Changing the generator changes every day's puzzle, so
+  bump `CONFIG.version` only on purpose. The flag order is a fixed shuffle of `POOL` (`CONFIG.seed`), five per day.
+- The changed shades sit on a small 3x2 grid in colour space with the real shade in a random cell. A plain "real flag plus
+  random edits" would let a player find the real one by comparing copies (it is the copy closest to all the others);
+  the grid avoids that. The test measures this: no comparison rule picks the real flag more than 40% of the time.
+- Every pair of shades is at least `CONFIG.gap` apart (CIEDE2000) and clear of `anchors` (other shades the same colour is
+  commonly drawn in), so a wrong copy is never a near miss someone could fairly choose.
+- Wrong copies stay in the same colour family where the colour allows it (`SAME_HUE`), and some wrong copy is at least as
+  saturated as the real one (otherwise "pick the most vivid" wins).
+- Knobs for playtesting: `CONFIG.options` (copies shown), `CONFIG.gap` (how different), `SAME_HUE`.
+- The pool is only flags where shade changes alone work. Flags whose key colour is already as saturated as a screen can show
+  (plain red-and-white flags, pure-primary tricolours) need hand-made variants (swapped stripes, moved details, changed emblem colours).
+
+Not built yet: server-side scores ("X% of players got 5/5"), streaks, a practice (random five) version, analytics events,
+and any text on the privacy page (nothing is sent anywhere; the result is only kept in this browser as `tc:spot:<date>`).
 
 ## Single-file preview
 

@@ -22,7 +22,7 @@ html = html.replace(/<link rel="preload" href="fonts\/[^>]*>\n?/g, '');
 html = html.replace(/\s*<nav class="legal-links"[\s\S]*?<\/nav>/, '');
 // no measurement ID = js/privacy.js starts no analytics and shows no banner
 html = html.replace(/<meta name="ga-measurement-id"[^>]*>/, '<!-- analytics disabled in preview build -->');
-const scripts = ['js/color.js', 'js/streak.js', 'js/privacy.js', 'js/picker.js', 'js/flagboard.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
+const scripts = ['js/color.js', 'js/streak.js', 'js/privacy.js', 'js/picker.js', 'js/flagboard.js', 'js/spotgen.js', 'js/spot.js', 'js/game.js'].map(f => `<script>\n${read(f)}\n</script>`).join('\n');
 html = html.replace(/<script src="js\/color.js"><\/script>[\s\S]*?<script src="js\/game.js"><\/script>/,
   `<script>window.EMBEDDED_FLAGS=${JSON.stringify(embedded)};</script>\n` + scripts);
 if (artifact) {

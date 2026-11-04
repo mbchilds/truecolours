@@ -114,6 +114,11 @@
           <span class="mode-desc">Five rounds, five countries, no repeats. Score up to 5,000 points.</span>
           <span class="streak-pill" id="quick-streak" hidden></span>
         </button>
+        <button class="mode-card spot" id="btn-spot">
+          <span class="mode-kicker">True Colours · Daily</span>
+          <span class="mode-title">Spot the real flag</span>
+          <span class="mode-desc" id="spot-desc">Six versions of the same flag, one of them genuine. Five flags a day, the same five for everyone.</span>
+        </button>
       </div>
       <button class="link-btn" id="btn-archive" data-nav="calendar" hidden>Past dailies</button>
       <button class="link-btn" id="btn-how">How does scoring work?</button>
@@ -251,6 +256,46 @@
     </div>
   </section>
 
+  <!-- ================= TRUE COLOURS: SPOT THE REAL FLAG (working title) ================= -->
+  <section id="screen-spot" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-spot-home" aria-label="Back to menu">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><use href="#i-chev-l"/></svg>
+      </button>
+      <div class="round-label" id="spot-round-label">Round 1 of 5</div>
+      <div class="score-chip"><span class="score-chip-label">Correct</span><span id="spot-score">0</span></div>
+    </header>
+    <div class="spot-wrap">
+      <span class="kicker" id="spot-kicker">True Colours · Daily #1</span>
+      <h1 class="country-name" id="spot-country">COUNTRY</h1>
+      <p class="spot-prompt" id="spot-prompt">One of these is the real flag. Which one?</p>
+      <div class="spot-grid" id="spot-grid" role="group" aria-labelledby="spot-prompt"></div>
+      <div class="spot-feedback" id="spot-feedback" role="status" aria-live="polite" hidden></div>
+      <div class="spot-actions">
+        <button class="btn primary" id="btn-spot-lock" disabled>Choose a flag</button>
+        <button class="btn primary" id="btn-spot-next" hidden>Next flag</button>
+      </div>
+      <p class="spot-note">The real flag is the one in our flag set. Wrong ones are always a clearly different shade, never a near miss.</p>
+    </div>
+  </section>
+
+  <section id="screen-spot-final" class="screen">
+    <div class="result-wrap">
+      <span class="kicker" id="spot-final-kicker">True Colours · Daily #1</span>
+      <h1 class="final-title">Your score</h1>
+      <p class="sr-only" id="spot-final-summary"></p>
+      <div class="result-score" aria-hidden="true">
+        <div class="big-score"><span id="spot-final-points">0</span><span class="of">/5</span></div>
+        <div class="verdict" id="spot-final-verdict"></div>
+      </div>
+      <ol class="spot-rounds" id="spot-rounds"></ol>
+      <div class="result-actions">
+        <button class="btn primary" id="btn-spot-share">Share my score</button>
+        <button class="btn ghost" id="btn-spot-final-home">Menu</button>
+      </div>
+    </div>
+  </section>
+
   </main>
 
   <!-- ================= HOW TO PLAY ================= -->
@@ -275,6 +320,8 @@
   <script src="js/privacy.js"></script>
   <script src="js/picker.js"></script>
   <script src="js/flagboard.js"></script>
+  <script src="js/spotgen.js"></script>
+  <script src="js/spot.js"></script>
   <script src="js/game.js"></script>
   <script src="js/globe.js"></script>
 </body>

@@ -410,3 +410,54 @@ button.sc-day:focus-visible, .cal-day:focus-visible, .dn-btn:focus-visible, .sc-
   .btn, .mode-card, .toast, .dn-btn, .cal-day { transition: none; }
   .btn:hover, .btn:active, .mode-card:hover { transform: none; }
 }
+
+/* ---------------------------------------------------------------- True Colours (spot the real flag; working title) */
+.mode-card.spot { grid-column: 1 / -1; }
+.mode-card.spot::after { background: var(--coral); }
+.spot .mode-kicker { color: var(--coral-2); }
+.spot-wrap { max-width: 960px; margin: 0 auto; padding: 8px 20px 60px; display: flex; flex-direction: column; align-items: center; }
+.spot-wrap .kicker { margin-top: 6px; }
+.spot-prompt { color: var(--muted); margin: 0 0 18px; text-align: center; max-width: 52ch; line-height: 1.45; }
+.spot-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: 100%; }
+.spot-loading { grid-column: 1 / -1; display: grid; place-items: center; min-height: 240px; }
+.spot-opt {
+  position: relative; display: block; padding: 8px; border: 3px solid transparent; border-radius: 16px; background: var(--panel); cursor: pointer;
+  transition: transform .12s ease, border-color .12s, box-shadow .12s, opacity .2s;
+}
+.spot-opt img { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 9px; object-fit: cover; user-select: none; -webkit-user-drag: none; }
+.spot-opt:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255, 255, 255, .22); }
+.spot-opt:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.spot-opt:disabled { cursor: default; }
+.spot-tag { position: absolute; left: 14px; top: 14px; background: rgba(11, 21, 38, .85); color: #fff; font: 700 13px var(--body); padding: 4px 9px; border-radius: 999px; letter-spacing: .04em; }
+/* picked: a teal ring, a lift and a tick in the label (so it doesn't rely on colour alone) */
+.spot-opt.picked { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(46, 230, 197, .22), 0 10px 30px rgba(46, 230, 197, .18); transform: translateY(-2px) scale(1.01); }
+.spot-opt.picked .spot-tag { background: var(--teal); color: var(--bg); }
+/* after locking in: the real flag glows green, a wrong pick goes coral, the rest fade. Each state also changes the label text. */
+.spot-opt.correct { border-color: #3ddc84; box-shadow: 0 0 0 5px rgba(61, 220, 132, .28), 0 12px 34px rgba(61, 220, 132, .3); animation: spotPop .45s ease; }
+.spot-opt.correct .spot-tag { background: #3ddc84; color: #06220f; }
+.spot-opt.wrong { border-color: var(--coral); box-shadow: 0 0 0 5px rgba(255, 107, 87, .26); animation: spotShake .4s ease; }
+.spot-opt.wrong .spot-tag { background: var(--coral); color: var(--bg); }
+.spot-opt.dim { opacity: .4; }
+.spot-feedback { margin-top: 22px; font-weight: 700; font-size: 18px; line-height: 1.35; padding: 12px 18px; border-radius: 14px; text-align: center; }
+.spot-feedback.ok { background: rgba(61, 220, 132, .14); color: #7ff0ad; border: 1px solid rgba(61, 220, 132, .4); }
+.spot-feedback.bad { background: rgba(255, 107, 87, .14); color: #ffb5a9; border: 1px solid rgba(255, 107, 87, .4); }
+.spot-actions { margin-top: 20px; display: flex; gap: 12px; justify-content: center; width: 100%; }
+.spot-actions .btn { min-width: min(260px, 100%); }
+.spot-note { color: var(--muted); font-size: 12.5px; margin-top: 26px; text-align: center; max-width: 60ch; line-height: 1.5; }
+.spot-rounds { list-style: none; margin: 26px 0 0; padding: 0; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.spot-rounds li { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.spot-rounds li:first-child { border-top: 0; }
+.spot-rounds .mark { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; flex: none; }
+.spot-rounds li.ok .mark { background: rgba(61, 220, 132, .2); color: #7ff0ad; }
+.spot-rounds li.bad .mark { background: rgba(255, 107, 87, .2); color: #ffb5a9; }
+.spot-rounds .name { font-weight: 600; flex: 1; min-width: 0; }
+.spot-rounds .how { color: var(--muted); font-size: 13px; }
+@keyframes spotPop { 0% { transform: scale(1); } 45% { transform: scale(1.045); } 100% { transform: scale(1); } }
+@keyframes spotShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@media (min-width: 720px) {
+  .spot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .spot-grid[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot-opt, .spot-opt.correct, .spot-opt.wrong { animation: none; transition: none; }
+}
